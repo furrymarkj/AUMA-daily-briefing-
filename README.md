@@ -82,11 +82,14 @@ back to `main`, so delivery history persists between runs.
    it manually with "Run workflow").
 
 > **Heads-up:** GitHub Pages on a free account only serves **public**
-> repositories. This repo is currently private, so either make it public
-> (the published site contains public news links only — no personal data,
-> no credentials) or use a paid GitHub plan. Until Pages is enabled, the
-> Action still runs and commits editions to `docs/`, but there is no live
-> site URL.
+> repositories. This repo is public, and the published site contains
+> public news links only — no personal data, no credentials. Note that
+> the repository also contains the committed state database
+> (`state/briefing.db`), which holds story URLs, titles, scores, and
+> any feedback notes entered through `feedback.py`. Do not put private
+> information (customer pricing, contact details, internal notes) into
+> feedback notes or change requests; keep those in the private
+> AUMA library instead.
 
 ## Tune your interests
 
