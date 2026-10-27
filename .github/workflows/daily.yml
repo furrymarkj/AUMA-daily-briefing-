@@ -1,0 +1,44 @@
+name: Daily briefing
+
+# Runs the pipeline every morning and publishes the edition to GitHub Pages.
+# Schedule is UTC: 11:00 UTC is about 6:00 AM CDT / 5:00 AM CST in
+# America/Chicago (daylight saving shifts it by an hour twice a year).
+# Use "Run workflow" in the Actions tab to trigger a run on demand.
+on:
+  schedule:
+    - cron: '0 11 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-briefing
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run the daily briefing
+        run: python3 run.py
+
+      - name: Commit edition and state
+        run: |
+          git config user.name "auma-briefing-bot"
+          git config user.email "auma-briefing-bot@users.noreply.github.com"
+          git add docs state
+          # Commit only when something changed (a no-op rerun commits nothing).
+          git diff --cached --quiet || git commit -m "Daily briefing $(TZ=America/Chicago date +%Y-%m-%d)"
+          git push
