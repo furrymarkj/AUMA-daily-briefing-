@@ -2,6 +2,8 @@
 
 Scoring (all rules live in config/interests.json — tune there, not here):
   - Keyword match in the headline: topic weight x 2. In the summary: x 1.
+    Both use whole-word matching, so a short keyword cannot match inside
+    an unrelated longer word in a summary.
   - Competitor company match: +12, section becomes 'competitors'.
   - Customer/project company match: +10, section becomes 'customers'.
   - Recency: published in the last 24h +20, 48h +10, 7 days +5.
@@ -9,11 +11,20 @@ Scoring (all rules live in config/interests.json — tune there, not here):
   - Exclusion phrases drop an item outright.
 
 Then: drop anything below min_score or older than max_age_days, drop
-anything already shown in a past edition, dedupe by title, and apply
-per-source and per-section caps so one publisher or subject cannot
-dominate. A small wildcard section keeps recent items that scored below
-the threshold but come from a publisher feed — discoveries outside the
-usual interests.
+anything whose normalized title already appeared in a recent edition,
+dedupe by title within the run, and apply per-source and per-section
+caps so one publisher or subject cannot dominate. A small wildcard
+section keeps recent feed items whose interest score (before the recency
+and trust boosts) is below the threshold — discoveries outside the
+usual interests. Wildcards obey the same total and per-source caps.
+
+Company matching: distinctive names match case-insensitively. Short or
+common-word names (Total, Shell, Dow, Beck, ...) match case-sensitively
+and only with supporting context — a company suffix after the name, or
+a domain cue word in the text — so "Dow Jones" or "Beck resigns" does
+not tag a company. When several records share one alias, the story is
+attributed to the record that owns the alias (the parent company), not
+to every facility that lists it.
 
 Run directly to test ranking on whatever is in the database:
     python3 rank.py
@@ -22,7 +33,7 @@ Run directly to test ranking on whatever is in the database:
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 
@@ -34,6 +45,20 @@ CASE_SENSITIVE_NAMES = {
     "total", "shell", "dow", "beck", "pratt", "eim", "awc", "isv", "aiv",
     "bbp", "sit", "atwell", "alfa", "genesis", "bray", "ward", "apex",
     "east",  # "EAST" (Electric Actuator Service of Texas) must not match "East Texas"
+}
+
+# A company suffix near an ambiguous name, or one of these domain
+# words anywhere in the text, counts as supporting context for the
+# match. The cues are deliberately industrial: ordinary municipal words
+# such as "water" or "plant" appear in stories about towns, not companies.
+COMPANY_SUFFIXES = {
+    "inc", "corp", "corporation", "llc", "ltd", "co", "company", "group",
+    "gmbh", "plc", "sa",
+}
+DOMAIN_CUES = {
+    "valve", "actuator", "automation", "chemical", "refinery",
+    "petrochemical", "pipeline", "lng", "epc", "offshore", "upstream",
+    "midstream", "downstream",
 }
 
 
@@ -50,28 +75,78 @@ def word_match(text, name):
     return re.search(pattern, text, re.IGNORECASE) is not None
 
 
+def company_match(text, name):
+    """True if a company name matches, with context for ambiguous names.
+
+    Distinctive names match on the word alone. A short or common-word
+    name (in CASE_SENSITIVE_NAMES) also needs a company suffix within
+    the next few words ("Shell Oil Company", "Beck Inc.") or a domain
+    cue word in the text ("Beck Automation"), so an unrelated use of
+    the same word does not tag the company.
+    """
+    if not word_match(text, name):
+        return False
+    if name.lower() not in CASE_SENSITIVE_NAMES:
+        return True
+    # Suffix: a company suffix among the next few words after the name.
+    pattern = r"\b" + re.escape(name) + r"\b"
+    match = re.search(pattern, text)
+    if match:
+        after = text[match.end():].strip()
+        words = [w.lower().rstrip(".") for w in
+                 re.split(r"[\s,;:.()]+", after)[:3] if w]
+        if any(w in COMPANY_SUFFIXES for w in words):
+            return True
+    lowered = text.lower()
+    return any(re.search(r"\b" + re.escape(cue) + r"\b", lowered)
+               for cue in DOMAIN_CUES)
+
+
 def match_companies(text, companies, competitors):
     """Return (section, [matched company names]) for a headline+summary.
 
     Competitors win over customers if both match — a story about Rotork
     is competitor intel even if it also names a customer.
+
+    For customers, several records can share one alias (a parent company
+    and its facilities). Each alias resolves to one record: the record
+    whose name IS the alias (the parent, which owns it), or, when only
+    one record lists the alias, that record. When several facilities
+    share an alias and none owns it, the alias itself is the tag — the
+    company, with no facility implied. A more specific tag supersedes
+    a generic one it contains.
     """
     matched_competitors = []
     for comp in competitors:
         names = [comp["name"]] + comp.get("variants", [])
-        if any(word_match(text, n) for n in names):
+        if any(company_match(text, n) for n in names):
             matched_competitors.append(comp["name"])
     if matched_competitors:
         return "competitors", matched_competitors
 
-    matched_customers = []
+    alias_to_records = {}
     for cust in companies:
         names = [cust["name"]] + cust.get("variants", [])
-        if any(word_match(text, n) for n in names):
-            matched_customers.append(cust["name"])
-    if matched_customers:
-        return "customers", matched_customers
-    return "industry", []
+        for n in names:
+            if company_match(text, n):
+                alias_to_records.setdefault(n, []).append(cust["name"])
+    if not alias_to_records:
+        return "industry", []
+
+    resolved = []
+    for alias, recs in alias_to_records.items():
+        owners = [r for r in recs if r == alias]
+        if owners:
+            resolved.append(owners[0])
+        elif len(recs) == 1:
+            resolved.append(recs[0])
+        else:
+            resolved.append(alias)
+    # Dedupe, and let a more specific tag supersede a generic one it contains.
+    resolved = sorted(set(resolved), key=len)
+    final = [t for t in resolved
+             if not any(t != o and t in o for o in resolved)]
+    return "customers", final
 
 
 def parse_date(value):
@@ -88,7 +163,14 @@ def parse_date(value):
 
 
 def score_candidate(cand, interests, customers, competitors, now):
-    """Score one candidate. Returns (score, keywords, companies, section)."""
+    """Score one candidate.
+
+    Returns (score, base_score, keywords, companies, section). `score`
+    includes the recency and trust boosts; `base_score` is the interest
+    score before those boosts, and is what the wildcard pool is judged
+    on — otherwise a recent feed item always clears the threshold on
+    recency + trust alone and the pool can never fill.
+    """
     title = cand.get("title", "")
     summary = cand.get("summary", "")
     text = f"{title} {summary}"
@@ -97,7 +179,7 @@ def score_candidate(cand, interests, customers, competitors, now):
     lowered = text.lower()
     for phrase in interests.get("exclusions", []):
         if phrase.lower() in lowered:
-            return -1, [], [], "industry"
+            return -1, -1, [], [], "industry"
 
     score = 0.0
     keywords = []
@@ -109,7 +191,7 @@ def score_candidate(cand, interests, customers, competitors, now):
             if word_match(title, kw):
                 score += weight * 2
                 keywords.append(kw)
-            elif kw.lower() in summary.lower():
+            elif word_match(summary, kw):
                 score += weight
                 keywords.append(kw)
 
@@ -119,11 +201,13 @@ def score_candidate(cand, interests, customers, competitors, now):
         score += boosts.get("competitor_match", 0)
     elif section == "customers":
         score += boosts.get("customer_match", 0)
+    base_score = score
 
-    # Recency.
+    # Recency. A future-dated story is treated as just published
+    # (a timezone or feed-date skew), never as extra-fresh.
     published = parse_date(cand.get("published", ""))
     if published:
-        age_hours = (now - published).total_seconds() / 3600
+        age_hours = max(0.0, (now - published).total_seconds() / 3600)
         if age_hours <= 24:
             score += boosts.get("recency_hours_24", 0)
         elif age_hours <= 48:
@@ -135,7 +219,7 @@ def score_candidate(cand, interests, customers, competitors, now):
     if cand.get("source_type") == "feed":
         score += cand.get("trust", 0)
 
-    return score, sorted(set(keywords)), companies, section
+    return score, base_score, sorted(set(keywords)), companies, section
 
 
 def normalize_title(title):
@@ -174,6 +258,7 @@ def rank(conn, config_dir, now):
     caps = interests.get("caps", {})
     min_score = interests.get("min_score", 5)
     max_age_days = interests.get("max_age_days", 14)
+    title_lookback_days = interests.get("title_lookback_days", 7)
 
     stats = {
         "scored": 0,
@@ -186,17 +271,29 @@ def rank(conn, config_dir, now):
     picked = {"industry": [], "competitors": [], "customers": [], "wildcard": []}
     seen_titles = set()
     per_source = {}
+    to_skip = []
+
+    # Titles shown in recent editions: the same story must not be
+    # published again under a different URL.
+    since = (now - timedelta(days=title_lookback_days)).date().isoformat()
+    recent_titles = state.get_recent_title_keys(conn, since)
 
     candidates = state.get_new_candidates(conn)
     scored = []
     wildcard_pool = []
     for cand in candidates:
+        # The section the story was collected under (a search recipe's
+        # hint, or a feed's default). It is the fallback when no company
+        # matches; company identification wins when it does.
+        orig_section = cand.get("section", "industry")
         # Publisher-feed trust bonus lives on the feed config, not the row.
         feed = feeds.get(cand.get("source", ""))
         cand["trust"] = feed.get("trust", 0) if feed else 0
-        score, keywords, companies, section = score_candidate(
+        score, base_score, keywords, companies, section = score_candidate(
             cand, interests, customers, competitors, now
         )
+        if section == "industry" and orig_section in ("customers", "competitors"):
+            section = orig_section
         cand["score"] = score
         cand["keywords"] = keywords
         cand["matched_companies"] = companies
@@ -205,30 +302,52 @@ def rank(conn, config_dir, now):
         # not just the collection-time defaults.
         state.update_scored(conn, cand)
 
-        published = parse_date(cand.get("published", ""))
-        if published and (now - published).days > max_age_days:
-            stats["dropped_too_old"] += 1
+        # Cross-day dedupe: this title already appeared recently.
+        title_key = normalize_title(cand["title"])
+        if title_key in recent_titles:
+            stats["dropped_duplicate_title"] += 1
+            to_skip.append(cand["id"])
             continue
+
+        # Age for the max-age rule: publication date when known, else the
+        # date the story was fetched. A future date counts as just
+        # published; the comparison is a real duration, not whole days.
+        published = parse_date(cand.get("published", ""))
+        age_dt = published or parse_date(cand.get("fetched_at", ""))
+        if age_dt:
+            age = now - age_dt
+            if age < timedelta(0):
+                age = timedelta(0)
+            if age > timedelta(days=max_age_days):
+                stats["dropped_too_old"] += 1
+                to_skip.append(cand["id"])
+                continue
         if score < 0:
             stats["dropped_low_score"] += 1
+            to_skip.append(cand["id"])
             continue
         stats["scored"] += 1
+        # Wildcard pool: recent publisher-feed items whose interest
+        # score (before recency/trust) is below the threshold. An item
+        # can be in the pool and in the main-loop list at once: if the
+        # main loop has room it is picked there, and if it loses on a
+        # cap the wildcard loop gives it a second chance. The pool is
+        # judged on the interest score, not the boosted score — otherwise
+        # recency + trust always clear the threshold and the pool can
+        # never fill.
+        if cand.get("source_type") == "feed" and published:
+            age_hours = max(0.0, (now - published).total_seconds() / 3600)
+            if age_hours <= 48 and base_score < min_score:
+                wildcard_pool.append(cand)
         if score < min_score:
-            # Wildcard pool: recent publisher-feed items outside the
-            # usual interests. They get a second chance below.
-            if cand.get("source_type") == "feed" and published:
-                age_hours = (now - published).total_seconds() / 3600
-                if age_hours <= 48:
-                    wildcard_pool.append(cand)
-            else:
+            if cand["id"] not in {c["id"] for c in wildcard_pool}:
                 stats["dropped_low_score"] += 1
+                to_skip.append(cand["id"])
             continue
         scored.append(cand)
 
     # Highest score first; ties break toward the most recent story.
-    scored.sort(key=lambda c: (-c["score"], c.get("published", "")), reverse=False)
-    scored.sort(key=lambda c: c.get("published", ""), reverse=True)
-    scored.sort(key=lambda c: -c["score"])
+    scored.sort(key=lambda c: (c["score"], c.get("published", "")), reverse=True)
 
     for cand in scored:
         section = cand["section"]
@@ -246,16 +365,37 @@ def rank(conn, config_dir, now):
         per_source[cand["source"]] = per_source.get(cand["source"], 0) + 1
         picked[section].append(cand)
 
-    # Wildcard: up to N recent feed items that scored below the threshold.
+    # Wildcard: recent feed items outside the usual interests, up to the
+    # wildcard cap — and inside the same total and per-source caps as the
+    # rest of the edition. The whole pool is scanned, not just the first
+    # few, so a duplicate at the top cannot starve the section.
     wildcard_pool.sort(key=lambda c: c.get("published", ""), reverse=True)
-    for cand in wildcard_pool[: caps.get("wildcard", 3)]:
+    for cand in wildcard_pool:
+        if len(picked["wildcard"]) >= caps.get("wildcard", 3):
+            break
+        if sum(len(v) for v in picked.values()) >= caps.get("total", 25):
+            break
+        if per_source.get(cand["source"], 0) >= caps.get("per_source", 5):
+            continue
         title_key = normalize_title(cand["title"])
         if title_key in seen_titles:
             continue
         seen_titles.add(title_key)
+        per_source[cand["source"]] = per_source.get(cand["source"], 0) + 1
         cand["section"] = "wildcard"
         picked["wildcard"].append(cand)
     stats["wildcard"] = len(picked["wildcard"])
+
+    # Rejected candidates are marked skipped with the run's other writes,
+    # so they are not rescored on every later day. Items that lost only
+    # on a cap stay 'new' — they may fit tomorrow's edition. A pool item
+    # that the main loop already picked is not rejected at all.
+    picked_ids = {c["id"] for sec in picked.values() for c in sec}
+    for cand in wildcard_pool:
+        if cand["id"] not in picked_ids:
+            to_skip.append(cand["id"])
+    if to_skip:
+        state.mark_skipped(conn, sorted(set(to_skip)))
 
     return picked, stats
 
