@@ -25,6 +25,7 @@ import re
 import sys
 import time
 from datetime import date, datetime, timezone
+from email.utils import parsedate_to_datetime
 from urllib.parse import quote_plus, urlparse, urlunparse
 
 import feedparser
@@ -42,6 +43,12 @@ TIMEOUT = 20
 # errors and are not retried either.
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 MAX_ATTEMPTS = 3
+
+# Overall collection budget (seconds, wall clock). Without one, each
+# source can burn its own retries and delays; a pathological morning
+# could run for many minutes before the edition is even ranked.
+# (Round 2, N9.) 300s is generous for ~20 sources at TIMEOUT=20s.
+COLLECTION_BUDGET_S = 300
 
 # Repo root = the directory this file lives in.
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -90,7 +97,7 @@ def parse_published(entry):
     return ""
 
 
-def fetch(url):
+def fetch(url, deadline=None):
     """Fetch a URL as text. Raises on HTTP errors and timeouts.
 
     Transient failures (429 / 5xx, connection errors, timeouts) are
@@ -98,9 +105,15 @@ def fetch(url):
     honoring Retry-After when the server sends one. A 403 or any other
     4xx is raised at once: it is an access-policy or client error, and
     retrying it cannot succeed.
+
+    `deadline` is a time.monotonic() value: no new attempt starts after
+    it, so one bad morning cannot burn the whole collection budget on
+    a single source. (Round 2, N9.)
     """
     last_exc = None
     for attempt in range(MAX_ATTEMPTS):
+        if deadline is not None and time.monotonic() > deadline:
+            raise TimeoutError(f"collection deadline exceeded for url: {url}")
         try:
             resp = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=TIMEOUT)
             if resp.status_code in RETRY_STATUSES:
@@ -121,19 +134,45 @@ def fetch(url):
     raise last_exc
 
 
+def _retry_after_seconds(raw):
+    """Parse a Retry-After header value to seconds, or None.
+
+    Accepts plain seconds ("120") and HTTP-date values
+    ("Wed, 21 Oct 2015 07:28:00 GMT"). Returns None when the value
+    is missing or unparsable, so the caller falls back to exponential
+    backoff. (Round 2, N9: HTTP-date values used to be ignored.)
+    """
+    if not raw:
+        return None
+    raw = raw.strip()
+    try:
+        return float(raw)
+    except ValueError:
+        pass
+    try:
+        dt = parsedate_to_datetime(raw)
+        if dt is None:
+            return None
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return (dt - datetime.now(timezone.utc)).total_seconds()
+    except (TypeError, ValueError, OverflowError):
+        return None
+
+
 def _sleep_before_retry(resp, attempt):
-    """Backoff before a retry: Retry-After if given, else 1s, 2s, ... + jitter."""
+    """Backoff before a retry: Retry-After if given, else 1s, 2s, ... + jitter.
+
+    The wait is clamped to [0, 60] seconds: a malformed negative
+    Retry-After used to reach time.sleep() and raise instead of
+    retrying. (Round 2, N9.)
+    """
     wait = None
     if resp is not None:
-        raw = resp.headers.get("Retry-After")
-        if raw:
-            try:
-                wait = min(float(raw), 60.0)
-            except ValueError:
-                wait = None
+        wait = _retry_after_seconds(resp.headers.get("Retry-After"))
     if wait is None:
         wait = (2 ** attempt) + random.uniform(0, 0.5)
-    time.sleep(wait)
+    time.sleep(max(0.0, min(wait, 60.0)))
 
 
 def cache_raw(cache_dir, source_name, run_date, text):
@@ -201,16 +240,19 @@ def due_today(recipe, run_date):
 
 
 def _run_search(conn, config_dir, cache_dir, run_date, run_id, label, engine,
-                query, section, fetched_at, summary):
-    """Run one search recipe and store its candidates. Returns True on success.
+                query, section, fetched_at, summary, deadline=None):
+    """Run one search recipe and store its candidates.
 
-    Records the source run (success or failure) and updates the summary.
-    Raises nothing: every failure is recorded and returned as False.
+    Returns the number of candidates parsed on success, or None on
+    failure. Raises nothing: every failure is recorded and returned
+    as None. A success with zero candidates still counts as a
+    transport success (searches_ok) but NOT as a usable source
+    (searches_usable) — see collect(). (Round 2, N3.)
     """
     import state  # local import so `python3 collect.py` works from repo root
 
     try:
-        raw = fetch(search_url(engine, query))
+        raw = fetch(search_url(engine, query), deadline=deadline)
         cache_raw(cache_dir, label, run_date, raw)
         parsed = feedparser.parse(raw)
         if parsed.bozo and not parsed.entries:
@@ -224,15 +266,17 @@ def _run_search(conn, config_dir, cache_dir, run_date, run_id, label, engine,
         conn.commit()
         summary["new_candidates"] += conn.total_changes - before
         summary["searches_ok"] += 1
+        if candidates:
+            summary["searches_usable"] += 1
         state.record_source_run(conn, run_date, label, "search",
                                 len(candidates), True, run_id=run_id)
-        return True
+        return len(candidates)
     except Exception as exc:
         summary["searches_failed"] += 1
         summary["failures"].append({"source": label, "error": str(exc)[:200]})
         state.record_source_run(conn, run_date, label, "search", 0, False,
                                 str(exc)[:200], run_id=run_id)
-        return False
+        return None
 
 
 def collect(conn, config_dir, cache_dir, run_date, run_id=""):
@@ -251,23 +295,31 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
     import state  # local import so `python3 collect.py` works from repo root
 
     fetched_at = datetime.now(timezone.utc).isoformat()
+    deadline = time.monotonic() + COLLECTION_BUDGET_S
     summary = {
         "feeds_ok": 0,
         "feeds_failed": 0,
         "searches_ok": 0,
         "searches_failed": 0,
+        # Usable sources: transport succeeded AND at least one candidate
+        # was parsed. The outage gate in run.py judges on these, not on
+        # raw ok counts — an HTTP 200 with an empty feed is not evidence
+        # of fresh news. (Round 2, N3.)
+        "feeds_usable": 0,
+        "searches_usable": 0,
         "new_candidates": 0,
         "failures": [],
     }
 
     feeds = load_json(os.path.join(config_dir, "feeds.json"))["feeds"]
     feeds_ok_names = set()
+    feeds_usable_names = set()
     for feed in feeds:
         if not feed.get("enabled", True):
             continue
         name = feed["name"]
         try:
-            raw = fetch(feed["url"])
+            raw = fetch(feed["url"], deadline=deadline)
             cache_raw(cache_dir, name, run_date, raw)
             parsed = feedparser.parse(raw)
             if parsed.bozo and not parsed.entries:
@@ -282,6 +334,9 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
             summary["new_candidates"] += conn.total_changes - before
             summary["feeds_ok"] += 1
             feeds_ok_names.add(name)
+            if candidates:
+                summary["feeds_usable"] += 1
+                feeds_usable_names.add(name)
             state.record_source_run(conn, run_date, name, "feed",
                                     len(candidates), True, run_id=run_id)
         except Exception as exc:  # one bad feed must not kill the run
@@ -294,27 +349,31 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
     for recipe in searches:
         if not due_today(recipe, run_date):
             continue
-        # A fallback recipe only runs when its publisher feed failed today.
+        # A fallback recipe only runs when its publisher feed failed to
+        # yield usable stories today. A feed that returned HTTP 200 with
+        # zero entries does not block its fallback. (Round 2, N3.)
         fallback_for = recipe.get("fallback_for")
-        if fallback_for and fallback_for in feeds_ok_names:
+        if fallback_for and fallback_for in feeds_usable_names:
             continue
         label = f"{recipe['engine']}: {recipe['query']}"
-        ok = _run_search(conn, config_dir, cache_dir, run_date, run_id,
-                         label, recipe["engine"], recipe["query"],
-                         recipe.get("section", "industry"), fetched_at, summary)
-        if not ok and recipe["engine"] == "google":
-            # One Bing retry for a failed Google search, clearly labeled.
+        found = _run_search(conn, config_dir, cache_dir, run_date, run_id,
+                            label, recipe["engine"], recipe["query"],
+                            recipe.get("section", "industry"), fetched_at,
+                            summary, deadline=deadline)
+        if (found is None or found == 0) and recipe["engine"] == "google":
+            # Failed Google search, or one that returned nothing usable:
+            # one Bing retry, clearly labeled.
             _run_search(conn, config_dir, cache_dir, run_date, run_id,
                         f"bing-fallback: {recipe['query']}", "bing",
                         recipe["query"], recipe.get("section", "industry"),
-                        fetched_at, summary)
+                        fetched_at, summary, deadline=deadline)
 
     voices = load_json(os.path.join(config_dir, "voices.json"))["voices"]
     for voice in voices:
         if voice.get("type") == "search":
             label = f"voice search: {voice['name']}"
             try:
-                raw = fetch(search_url("bing", voice["name"]))
+                raw = fetch(search_url("bing", voice["name"]), deadline=deadline)
                 cache_raw(cache_dir, label, run_date, raw)
                 parsed = feedparser.parse(raw)
                 candidates = entries_to_candidates(
@@ -324,6 +383,8 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
                     state.upsert_candidate(conn, cand)
                 conn.commit()
                 summary["searches_ok"] += 1
+                if candidates:
+                    summary["searches_usable"] += 1
                 state.record_source_run(conn, run_date, label, "search", len(candidates), True, run_id=run_id)
             except Exception as exc:
                 summary["searches_failed"] += 1
@@ -332,7 +393,7 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
         else:
             name = voice["name"]
             try:
-                raw = fetch(voice["feed_url"])
+                raw = fetch(voice["feed_url"], deadline=deadline)
                 cache_raw(cache_dir, name, run_date, raw)
                 parsed = feedparser.parse(raw)
                 candidates = entries_to_candidates(
@@ -342,6 +403,8 @@ def collect(conn, config_dir, cache_dir, run_date, run_id=""):
                     state.upsert_candidate(conn, cand)
                 conn.commit()
                 summary["feeds_ok"] += 1
+                if candidates:
+                    summary["feeds_usable"] += 1
                 state.record_source_run(conn, run_date, name, "feed", len(candidates), True, run_id=run_id)
             except Exception as exc:
                 summary["feeds_failed"] += 1
