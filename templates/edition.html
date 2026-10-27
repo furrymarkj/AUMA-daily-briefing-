@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AUMA Daily Briefing — $date</title>
+<link rel="stylesheet" href="../style.css">
+</head>
+<body>
+<header>
+  <p class="kicker">AUMA Daily Briefing</p>
+  <h1>$date</h1>
+  <p class="standfirst">$item_count stories for the Texas / Louisiana / Mississippi
+  territory — electric actuators, valve automation, water &amp; wastewater,
+  power, oil &amp; gas, chemical, industrial, and data centers.</p>
+  $failures_html
+</header>
+<main>
+$sections_html
+</main>
+<footer>
+  <p>Headlines and excerpts come from the publishers linked under each story.
+  Excerpts are not independently fact-checked analysis. Scoring is
+  keyword-and-recency based; it misses nuance, and coverage depends on the
+  configured feeds and searches. The daily run uses no AI and no paid APIs.</p>
+  <p>To rate a story or ask for a change, run
+  <code>python3 feedback.py rate &lt;url&gt; 1-5</code> or
+  <code>python3 feedback.py request "add …"</code> in the repo, or
+  <code>python3 feedback.py packet</code> to export a review packet for
+  AI-assisted tuning.</p>
+  <p class="generated">Generated $generated_at</p>
+  $archive_html
+</footer>
+</body>
+</html>
