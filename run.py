@@ -4,21 +4,29 @@ Runs the whole pipeline: collect -> rank -> publish.
 
     python3 run.py                 # today's edition (America/Chicago date)
     python3 run.py --date 2026-10-27
-    python3 run.py --force         # rerun even if today is already published
+    python3 run.py --force         # rebuild today's edition from its recorded stories
     python3 run.py --db /tmp/test.db --output /tmp/site   # local test run
 
 Rules:
   - If today's edition is already published (and --force is not given),
     the run is a no-op and exits 0. Rerunning a completed day changes
     nothing.
-  - If collection fails for every source, or ranking picks zero items,
+  - If collection fails for every source, no new edition is published:
     the previous public edition stays in place and the run exits 1.
+    (Previously, unshown stories collected on earlier days could still
+    produce a fresh-looking edition on a total-outage day.)
+  - --force rebuilds the recorded edition from its own stories. It does
+    not re-collect or re-rank, so the published edition cannot silently
+    change under a rerun.
+  - If ranking picks zero items, the previous public edition stays in
+    place and the run exits 1.
   - The daily run uses zero LLM tokens and no paid APIs.
 """
 
 import argparse
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -43,10 +51,11 @@ def main(argv=None):
     parser.add_argument("--cache", default=os.path.join(ROOT, "cache"))
     parser.add_argument("--output", default=os.path.join(ROOT, "docs"))
     parser.add_argument("--force", action="store_true",
-                        help="Rerun even if this date is already published")
+                        help="Rebuild this date's edition from its recorded stories")
     args = parser.parse_args(argv)
 
     run_date = args.date or chicago_today()
+    run_id = f"{run_date}-{uuid.uuid4().hex[:8]}"
     conn = state.connect(args.db)
 
     # Dated receipt: rerunning a completed day is a no-op.
@@ -55,10 +64,38 @@ def main(argv=None):
         print(f"Edition {run_date} already published — nothing to do.")
         return 0
 
+    # --force rebuilds the recorded edition from its own stories. No
+    # collection, no re-ranking: the published edition is reproduced,
+    # not replaced by a new selection.
+    if existing and existing["status"] == "published" and args.force:
+        items = state.get_edition_candidates(conn, run_date)
+        if items:
+            sections = {}
+            for item in items:
+                sections.setdefault(item.get("section", "industry"), []).append(item)
+            failures = [
+                {"source": r["source"], "error": r["error"]}
+                for r in state.get_source_runs(
+                    conn, run_date, run_id=existing.get("run_id") or None)
+                if not r["ok"]
+            ]
+            stats = {"wildcard": len(sections.get("wildcard", []))}
+            print(f"Rebuilding edition {run_date} from {len(items)} recorded stories.")
+            status, count, path = publish.publish(
+                conn, sections, stats, failures, run_date, args.output,
+                run_id=run_id,
+            )
+            if status == "failed":
+                print("Rebuild FAILED: recorded edition is empty.")
+                return 1
+            print(f"Rebuilt {count} items -> {path}")
+            return 0
+        print(f"Edition {run_date} is recorded but has no stories — running normally.")
+
     print(f"=== AUMA daily briefing — {run_date} ===")
     now = datetime.now(timezone.utc)
 
-    summary = collect.collect(conn, args.config, args.cache, run_date)
+    summary = collect.collect(conn, args.config, args.cache, run_date, run_id)
     print(
         f"Collect: {summary['feeds_ok']} feeds ok, {summary['feeds_failed']} failed; "
         f"{summary['searches_ok']} searches ok, {summary['searches_failed']} failed; "
@@ -67,6 +104,17 @@ def main(argv=None):
     if summary["feeds_failed"] or summary["searches_failed"]:
         for failure in summary["failures"]:
             print(f"  FAILED: {failure['source']} — {failure['error']}")
+
+    # Total outage: no source returned usable content. Publishing from
+    # stories collected on earlier days would present a stale selection
+    # as a fresh edition, so the previous edition stays live instead.
+    if summary["feeds_ok"] == 0 and summary["searches_ok"] == 0:
+        state.record_edition(
+            conn, run_date, "", 0,
+            datetime.now(timezone.utc).isoformat(), "failed", run_id=run_id,
+        )
+        print("Publish FAILED: every source failed — previous edition left in place.")
+        return 1
 
     picked, stats = rank.rank(conn, args.config, now)
     total = sum(len(v) for v in picked.values())
@@ -78,11 +126,11 @@ def main(argv=None):
 
     failures = [
         {"source": r["source"], "error": r["error"]}
-        for r in state.get_source_runs(conn, run_date)
+        for r in state.get_source_runs(conn, run_date, run_id=run_id)
         if not r["ok"]
     ]
     status, count, path = publish.publish(
-        conn, picked, stats, failures, run_date, args.output
+        conn, picked, stats, failures, run_date, args.output, run_id=run_id
     )
     if status == "failed":
         print("Publish FAILED: no items picked — previous edition left in place.")
