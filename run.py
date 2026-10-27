@@ -17,7 +17,10 @@ Rules:
     produce a fresh-looking edition on a total-outage day.)
   - --force rebuilds the recorded edition from its own stories. It does
     not re-collect or re-rank, so the published edition cannot silently
-    change under a rerun.
+    change under a rerun. The rebuild renders from the edition manifest
+    (story ids in recorded render order), reuses the original run id,
+    timestamp and failure note, and never replaces the homepage unless
+    the rebuilt date IS the latest edition. (Round 2, N2.)
   - If ranking picks zero items, the previous public edition stays in
     place and the run exits 1.
   - The daily run uses zero LLM tokens and no paid APIs.
@@ -66,7 +69,13 @@ def main(argv=None):
 
     # --force rebuilds the recorded edition from its own stories. No
     # collection, no re-ranking: the published edition is reproduced,
-    # not replaced by a new selection.
+    # not replaced by a new selection. The rebuild reuses the ORIGINAL
+    # run id, created_at and failure note, and renders from the edition
+    # manifest (recorded render order) — so the rebuilt page is
+    # identical to the original. A historical rebuild updates only its
+    # dated page: the root page (the latest edition) is left alone
+    # unless the rebuilt date is the latest published edition.
+    # (Round 2, N2.)
     if existing and existing["status"] == "published" and args.force:
         items = state.get_edition_candidates(conn, run_date)
         if items:
@@ -80,10 +89,23 @@ def main(argv=None):
                 if not r["ok"]
             ]
             stats = {"wildcard": len(sections.get("wildcard", []))}
-            print(f"Rebuilding edition {run_date} from {len(items)} recorded stories.")
+            latest = state.get_past_edition_dates(conn, limit=1)
+            write_root = bool(latest) and latest[0] == run_date
+            created_at = existing.get("created_at") or ""
+            generated_at = None
+            if created_at:
+                try:
+                    generated_at = datetime.fromisoformat(created_at).strftime(
+                        "%Y-%m-%d %H:%M UTC")
+                except ValueError:
+                    generated_at = None
+            print(f"Rebuilding edition {run_date} from {len(items)} recorded stories"
+                  + ("" if write_root else " (dated page only — not the latest edition)"))
             status, count, path = publish.publish(
                 conn, sections, stats, failures, run_date, args.output,
-                run_id=run_id,
+                run_id=existing.get("run_id") or run_id,
+                write_root=write_root, generated_at=generated_at,
+                created_at=created_at or None,
             )
             if status == "failed":
                 print("Rebuild FAILED: recorded edition is empty.")
@@ -99,24 +121,28 @@ def main(argv=None):
     print(
         f"Collect: {summary['feeds_ok']} feeds ok, {summary['feeds_failed']} failed; "
         f"{summary['searches_ok']} searches ok, {summary['searches_failed']} failed; "
+        f"{summary['feeds_usable']} feeds usable, {summary['searches_usable']} searches usable; "
         f"{summary['new_candidates']} new candidates."
     )
     if summary["feeds_failed"] or summary["searches_failed"]:
         for failure in summary["failures"]:
             print(f"  FAILED: {failure['source']} — {failure['error']}")
 
-    # Total outage: no source returned usable content. Publishing from
-    # stories collected on earlier days would present a stale selection
-    # as a fresh edition, so the previous edition stays live instead.
-    if summary["feeds_ok"] == 0 and summary["searches_ok"] == 0:
+    # Total outage: no source returned usable content. A source counts
+    # only if it yielded at least one candidate — an HTTP 200 with an
+    # empty feed is transport success, not evidence of fresh news.
+    # Publishing from stories collected on earlier days would present
+    # a stale selection as a fresh edition, so the previous edition
+    # stays live instead. (Round 2, N3.)
+    if summary["feeds_usable"] == 0 and summary["searches_usable"] == 0:
         state.record_edition(
             conn, run_date, "", 0,
             datetime.now(timezone.utc).isoformat(), "failed", run_id=run_id,
         )
-        print("Publish FAILED: every source failed — previous edition left in place.")
+        print("Publish FAILED: no source returned usable stories — previous edition left in place.")
         return 1
 
-    picked, stats = rank.rank(conn, args.config, now)
+    picked, stats = rank.rank(conn, args.config, now, edition_date=run_date)
     total = sum(len(v) for v in picked.values())
     print(
         f"Rank: scored {stats['scored']}, picked {total} "
