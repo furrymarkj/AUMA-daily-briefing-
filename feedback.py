@@ -10,13 +10,14 @@ database:
     python3 feedback.py packet
 
 `packet` exports a review packet (review_packet.json) with the current
-config, recent feedback, open requests, and recent edition stats. That
-packet is the input for the manual AI-refinement loop: give it to an AI
+config, recent feedback (each rated story joined with the score,
+keywords, matched companies, section, and selection outcome that
+produced it), open requests, and recent edition stats. That packet is
+the input for the manual AI-refinement loop: give it to an AI
 assistant, which proposes changes to keywords, weights, or search
-queries. Proposals are validated (the packet has a schema; the app
-checks proposed JSON parses and only touches config keys it knows) and
-are applied only when you explicitly accept them — nothing is ever
-rewritten silently because you clicked a story.
+queries. You review every proposal and apply the ones you accept by
+editing config/*.json yourself — the tool does not validate or apply
+proposals. Nothing is ever rewritten silently because you rated a story.
 """
 
 import argparse
@@ -81,12 +82,38 @@ def cmd_list(conn, args):
 
 
 def cmd_packet(conn, args):
-    """Export a review packet for the AI-refinement loop."""
+    """Export a review packet for the AI-refinement loop.
+
+    Each rated story is joined with the evidence behind its score —
+    keywords, matched companies, section, source, publication date,
+    and whether it was shown, skipped, or is still new — so a reviewer
+    can tell WHY it scored as it did instead of guessing from the
+    rating alone.
+    """
     import state
 
     def load(name):
         with open(os.path.join(ROOT, "config", name), encoding="utf-8") as f:
             return json.load(f)
+
+    rated_stories = []
+    for fb in state.get_feedback(conn, limit=50):
+        story = {"rating": fb["rating"], "note": fb.get("note", ""),
+                 "rated_on": fb["date"], "url": fb["url"]}
+        cand = state.get_candidate_by_url(conn, fb["url"])
+        if cand:
+            story.update({
+                "title": cand.get("title", ""),
+                "score": cand.get("score", 0),
+                "keywords": cand.get("keywords", []),
+                "matched_companies": cand.get("matched_companies", []),
+                "section": cand.get("section", ""),
+                "source": cand.get("source", ""),
+                "published": cand.get("published", ""),
+                "outcome": cand.get("status", ""),
+                "edition_date": cand.get("edition_date", ""),
+            })
+        rated_stories.append(story)
 
     packet = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
@@ -95,7 +122,10 @@ def cmd_packet(conn, args):
             "to keywords, weights, boosts, exclusions, feeds, or searches. "
             "Only propose changes to keys that already exist in the config "
             "files. Do not invent feed URLs. Do not change company lists "
-            "unless a request below asks for it."
+            "unless a request below asks for it. Each rated story carries "
+            "the score, keywords, matched companies, section, and outcome "
+            "behind it — use that evidence, not the rating alone, to judge "
+            "whether a keyword, a company match, or a boost caused it."
         ),
         "config": {
             "interests": load("interests.json"),
@@ -105,6 +135,7 @@ def cmd_packet(conn, args):
             "customers_count": len(load("customers.json")["customers"]),
         },
         "feedback": state.get_feedback(conn, limit=50),
+        "rated_stories": rated_stories,
         "open_requests": state.get_open_requests(conn),
         "recent_editions": conn.execute(
             "SELECT date, item_count, status FROM editions "
