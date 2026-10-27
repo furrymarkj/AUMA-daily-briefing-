@@ -1,0 +1,87 @@
+{
+  "_comment": "Competitors are NEVER treated as customers. Matches here go in the Competitors section of the briefing as intel.",
+  "competitors": [
+    {
+      "name": "DeZURIK",
+      "variants": [
+        "DeZurik"
+      ],
+      "note": "Electric actuator competitor."
+    },
+    {
+      "name": "Beck",
+      "variants": [
+        "Beck Actuator",
+        "Beck Controls"
+      ],
+      "note": "Precision electric actuators."
+    },
+    {
+      "name": "Rotork",
+      "variants": [
+        "Rotork Controls",
+        "Rotork plc",
+        "Rotork IQ3"
+      ],
+      "note": "Electric actuator competitor (Rotork IQ3)."
+    },
+    {
+      "name": "Bettis",
+      "variants": [
+        "Bettis ICON",
+        "Bettis XTE",
+        "Bettis RTS"
+      ],
+      "note": "Emerson actuator brand."
+    },
+    {
+      "name": "Emerson",
+      "variants": [
+        "Emerson Automation Solutions",
+        "Emerson Final Control",
+        "Limitorque",
+        "Limitorque MX"
+      ],
+      "note": "Limitorque MX is Emerson's electric actuator line."
+    },
+    {
+      "name": "Flowserve",
+      "variants": [
+        "Flowserve Corporation",
+        "MOGAS"
+      ],
+      "note": "Competitor actuator manufacturer; MOGAS is Flowserve-owned."
+    },
+    {
+      "name": "Bernard",
+      "variants": [
+        "Bernard Controls",
+        "Bernard Intelli"
+      ],
+      "note": "Bernard Intelli actuators."
+    },
+    {
+      "name": "EIM",
+      "variants": [
+        "EIM Controls"
+      ],
+      "note": "EIM electric actuators."
+    },
+    {
+      "name": "Henry Pratt",
+      "variants": [
+        "Pratt",
+        "Henry Pratt Company",
+        "Pratt Positron"
+      ],
+      "note": "Pratt valves/actuation."
+    },
+    {
+      "name": "Scallon Controls",
+      "variants": [
+        "Scallon"
+      ],
+      "note": "Emerson Impact Partner (Beaumont, TX) — Bettis/Fisher/Crosby/DeltaV/KTM distributor. Competitor channel, not a customer."
+    }
+  ]
+}
