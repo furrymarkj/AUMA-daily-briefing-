@@ -7,12 +7,17 @@ needs to remember:
   has already appeared in an edition (so nothing is shown twice).
 - editions: one row per published day — the receipt that makes rerunning
   a completed day a no-op.
+- edition_items: the immutable manifest of one edition — story ids in
+  the exact order they were rendered, with their section. A --force
+  rebuild renders from this manifest, so a rebuild reproduces the
+  recorded edition instead of re-sorting it.
 - source_runs: per-source results for each day (what worked, what failed).
-- feedback / requests: story ratings and change requests (see feedback.py).
 
 The database file is committed back to the repo by the GitHub Action so
 delivery history survives between runs. No personal data lives here —
-only public story URLs, titles and scores.
+only public story URLs, titles and scores. Feedback (ratings, notes,
+change requests) lives in a SEPARATE untracked database, feedback.db
+(see feedback.py) — never in this file, never in the public repo.
 """
 
 import json
@@ -28,6 +33,11 @@ CREATE TABLE IF NOT EXISTS candidates (
     source TEXT,
     source_type TEXT,          -- 'feed' or 'search'
     section TEXT,              -- 'industry' | 'competitors' | 'customers' | 'wildcard'
+    source_section TEXT,       -- section at COLLECTION time (feed default /
+                               -- search-recipe hint). Ranking never overwrites
+                               -- this; it is the fallback hint when no company
+                               -- matches. (Round 2, N6: the ranked section used
+                               -- to overwrite the hint.)
     published TEXT,            -- ISO date-time of the story (may be empty)
     fetched_at TEXT,
     score REAL DEFAULT 0,
@@ -45,6 +55,13 @@ CREATE TABLE IF NOT EXISTS editions (
     status TEXT,               -- 'published' | 'failed' | 'noop'
     run_id TEXT                -- execution that produced this row
 );
+CREATE TABLE IF NOT EXISTS edition_items (
+    edition_date TEXT NOT NULL,
+    candidate_id INTEGER NOT NULL,
+    position INTEGER NOT NULL, -- render order within the edition
+    section TEXT NOT NULL,     -- section the story appeared under
+    PRIMARY KEY (edition_date, candidate_id)
+);
 CREATE TABLE IF NOT EXISTS source_runs (
     id INTEGER PRIMARY KEY,
     date TEXT,
@@ -54,21 +71,6 @@ CREATE TABLE IF NOT EXISTS source_runs (
     ok INTEGER,                -- 1 ok, 0 failed
     error TEXT,
     run_id TEXT                -- execution that produced this row
-);
-CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY,
-    date TEXT,
-    url TEXT,
-    rating INTEGER,            -- 1..5
-    note TEXT,
-    created_at TEXT
-);
-CREATE TABLE IF NOT EXISTS requests (
-    id INTEGER PRIMARY KEY,
-    text TEXT,
-    kind TEXT,                 -- 'add' | 'change' | 'remove' | 'other'
-    status TEXT DEFAULT 'open',
-    created_at TEXT
 );
 """
 
@@ -89,6 +91,19 @@ def _migrate(conn):
         conn.execute("ALTER TABLE editions ADD COLUMN run_id TEXT")
     if "run_id" not in columns("source_runs"):
         conn.execute("ALTER TABLE source_runs ADD COLUMN run_id TEXT")
+    if "source_section" not in columns("candidates"):
+        conn.execute("ALTER TABLE candidates ADD COLUMN source_section TEXT")
+        # Best available backfill: the current section is the only hint
+        # surviving from before this column existed.
+        conn.execute("UPDATE candidates SET source_section = section "
+                     "WHERE source_section IS NULL")
+    # Feedback storage moved out of this database (round 2, N8): ratings,
+    # notes and requests live in feedback.db (untracked, local only).
+    # Verified Oct 27, 2026: both tables held 0 rows, so dropping them
+    # loses nothing. If rows ever appear here again, that is a bug —
+    # feedback.py is the only writer of feedback now.
+    conn.execute("DROP TABLE IF EXISTS feedback")
+    conn.execute("DROP TABLE IF EXISTS requests")
     conn.commit()
 
     # Backfill normalized titles for rows collected before title_key existed.
@@ -121,19 +136,26 @@ def _title_key(cand):
 
 
 def upsert_candidate(conn, cand):
-    """Insert a candidate, or ignore it if the URL is already known."""
+    """Insert a candidate, or ignore it if the URL is already known.
+
+    source_section records the section at collection time (the feed's
+    default or the search recipe's hint). It is written once, here,
+    and never updated by ranking — update_scored() touches only the
+    ranked section. (Round 2, N6.)
+    """
     conn.execute(
         """INSERT OR IGNORE INTO candidates
            (url, title, summary, source, source_type, section,
-            published, fetched_at, score, keywords, matched_companies, status,
-            title_key)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)""",
+            source_section, published, fetched_at, score, keywords,
+            matched_companies, status, title_key)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'new', ?)""",
         (
             cand["url"],
             cand["title"],
             cand.get("summary", ""),
             cand.get("source", ""),
             cand.get("source_type", ""),
+            cand.get("section", "industry"),
             cand.get("section", "industry"),
             cand.get("published", ""),
             cand.get("fetched_at", ""),
@@ -178,17 +200,30 @@ def mark_skipped(conn, candidate_ids, commit=True):
 
 
 def record_published_edition(conn, candidate_ids, date, path, item_count,
-                             created_at, run_id=""):
+                             created_at, run_id="", ordered=None):
     """Mark an edition's stories shown AND record the edition, in one commit.
 
     The two updates used to commit separately: if the second failed, the
     stories were marked shown with an edition_date but no edition receipt
     existed, and a rerun could publish a different edition over the same
     date. One transaction closes that window.
+
+    `ordered` is the render-order manifest: a list of (candidate_id,
+    section) in the exact order the stories were rendered (section order,
+    then pick order within the section). It is written to edition_items
+    in the same transaction, so a --force rebuild can reproduce the
+    recorded edition instead of re-sorting it. (Round 2, N2.)
     """
     mark_shown(conn, candidate_ids, date, commit=False)
     record_edition(conn, date, path, item_count, created_at, "published",
                    run_id=run_id, commit=False)
+    if ordered is not None:
+        conn.execute("DELETE FROM edition_items WHERE edition_date = ?", (date,))
+        conn.executemany(
+            "INSERT INTO edition_items (edition_date, candidate_id, position, section) "
+            "VALUES (?, ?, ?, ?)",
+            [(date, cid, pos, sec) for pos, (cid, sec) in enumerate(ordered)],
+        )
     conn.commit()
 
 
@@ -214,17 +249,30 @@ def get_edition(conn, date):
 
 
 def get_edition_candidates(conn, date):
-    """Stories recorded as shown in one edition, in pick order.
+    """Stories recorded as shown in one edition, in render order.
 
     Used by --force rebuilds: the edition is re-rendered from exactly
-    these stories instead of re-ranking. JSON list fields are parsed
-    back to lists so rendering matches the in-memory shape.
+    these stories instead of re-ranking. The order comes from the
+    edition_items manifest (round 2, N2) — the order they were rendered
+    in, including wildcard items, which were originally sorted by
+    publication date, not by score. JSON list fields are parsed back to
+    lists so rendering matches the in-memory shape.
+
+    Legacy editions published before the manifest existed have no
+    edition_items rows; those fall back to the old score-desc order.
     """
     rows = conn.execute(
-        "SELECT * FROM candidates WHERE status = 'shown' AND edition_date = ? "
-        "ORDER BY score DESC, published DESC",
+        "SELECT c.* FROM candidates c "
+        "JOIN edition_items e ON e.candidate_id = c.id "
+        "WHERE e.edition_date = ? ORDER BY e.position",
         (date,),
     ).fetchall()
+    if not rows:
+        rows = conn.execute(
+            "SELECT * FROM candidates WHERE status = 'shown' AND edition_date = ? "
+            "ORDER BY score DESC, published DESC",
+            (date,),
+        ).fetchall()
     out = []
     for r in rows:
         d = dict(r)
@@ -315,33 +363,7 @@ def get_past_edition_dates(conn, limit=30):
     ).fetchall()
     return [r["date"] for r in rows]
 
-
-def add_feedback(conn, date, url, rating, note, created_at):
-    conn.execute(
-        "INSERT INTO feedback (date, url, rating, note, created_at) "
-        "VALUES (?, ?, ?, ?, ?)",
-        (date, url, rating, note, created_at),
-    )
-    conn.commit()
-
-
-def add_request(conn, text, kind, created_at):
-    conn.execute(
-        "INSERT INTO requests (text, kind, created_at) VALUES (?, ?, ?)",
-        (text, kind, created_at),
-    )
-    conn.commit()
-
-
-def get_feedback(conn, limit=50):
-    rows = conn.execute(
-        "SELECT * FROM feedback ORDER BY created_at DESC LIMIT ?", (limit,)
-    ).fetchall()
-    return [dict(r) for r in rows]
-
-
-def get_open_requests(conn):
-    rows = conn.execute(
-        "SELECT * FROM requests WHERE status = 'open' ORDER BY created_at"
-    ).fetchall()
-    return [dict(r) for r in rows]
+# NOTE: feedback (ratings, notes, change requests) used to live in this
+# database. It moved to feedback.db — see feedback.py (round 2, N8).
+# The tables were dropped by _migrate; the functions above were removed
+# with them. Nothing in this module reads or writes feedback anymore.
