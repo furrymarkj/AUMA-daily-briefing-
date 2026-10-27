@@ -34,12 +34,27 @@ jobs:
       - name: Run the daily briefing
         run: python3 run.py
 
+      # Two commit steps, split by outcome (round 2, N1). A failed run
+      # must never publish partial output: on failure only the state
+      # database is committed (diagnostics — source_runs, the failed
+      # edition receipt). docs/ is committed only when the pipeline
+      # succeeded, so a failed run cannot push a half-written edition
+      # to GitHub Pages. The publish step itself also stages files
+      # before promoting them (see publish.py).
+      - name: Commit diagnostics only (failed runs)
+        if: failure()
+        run: |
+          git config user.name "auma-briefing-bot"
+          git config user.email "auma-briefing-bot@users.noreply.github.com"
+          git add state
+          # Commit only when something changed (a no-op rerun commits nothing).
+          git diff --cached --quiet || git commit -m "Daily briefing $(TZ=America/Chicago date +%Y-%m-%d) (failed run diagnostics)"
+          # A concurrent remote commit rejects a plain push. Fetch and
+          # rebase once, then push again; never force-push.
+          git push || (git pull --rebase && git push)
+
       - name: Commit edition and state
-        # Always run, even when the pipeline failed: a failed run still
-        # leaves diagnostics (source_runs, the failed edition receipt)
-        # in state/, and committing them is how the failure is recorded
-        # instead of silently vanishing.
-        if: always()
+        if: success()
         run: |
           git config user.name "auma-briefing-bot"
           git config user.email "auma-briefing-bot@users.noreply.github.com"
