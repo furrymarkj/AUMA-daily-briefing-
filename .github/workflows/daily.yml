@@ -35,10 +35,17 @@ jobs:
         run: python3 run.py
 
       - name: Commit edition and state
+        # Always run, even when the pipeline failed: a failed run still
+        # leaves diagnostics (source_runs, the failed edition receipt)
+        # in state/, and committing them is how the failure is recorded
+        # instead of silently vanishing.
+        if: always()
         run: |
           git config user.name "auma-briefing-bot"
           git config user.email "auma-briefing-bot@users.noreply.github.com"
           git add docs state
           # Commit only when something changed (a no-op rerun commits nothing).
           git diff --cached --quiet || git commit -m "Daily briefing $(TZ=America/Chicago date +%Y-%m-%d)"
-          git push
+          # A concurrent remote commit rejects a plain push. Fetch and
+          # rebase once, then push again; never force-push.
+          git push || (git pull --rebase && git push)
