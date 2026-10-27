@@ -18,9 +18,23 @@ Rules from the design:
     never leave a half-written page, and the shown-marking and the
     edition receipt commit together, so the database cannot say an
     edition exists that was never recorded (or vice versa).
+  - Publication is staged, then promoted (round 2, N1): every page is
+    rendered and written to a staging directory first. Only when all
+    pages are staged AND the database transaction commits do the files
+    move into docs/. A failure anywhere before promotion leaves docs/
+    untouched — and the workflow only commits docs/ on a successful
+    run, so a failed run can never publish partial output.
+  - The edition's story order is recorded as a manifest (round 2, N2):
+    section order, then pick order within each section. A --force
+    rebuild renders from that manifest, so it reproduces the recorded
+    edition instead of re-sorting it.
   - Links are relative to each page's own location: the dated page sits
     one directory down from the site root, the latest-edition copy sits
     at the root, and each gets the prefix its location needs.
+  - A historical rebuild (an edition that is not the latest) updates
+    only its dated page. The root page always shows the latest edition.
+    (Round 2, N2: rebuilding an older date used to replace the homepage
+    with that older edition.)
 
 Run directly to test rendering on whatever is picked in the database:
     python3 publish.py
@@ -163,10 +177,34 @@ def _render_page(template, run_date, total, sections, failures, archive_dates,
     )
 
 
-def publish(conn, sections, stats, failures, run_date, output_dir, run_id=""):
+def publish(conn, sections, stats, failures, run_date, output_dir,
+            run_id="", write_root=True, generated_at=None, created_at=None):
     """Write the edition. Returns ('published'|'failed', item_count, path).
 
     On 'failed' nothing is written and the previous edition stays live.
+
+    Staging (round 2, N1): the dated page, the root page and the
+    stylesheet are all rendered and written to a staging directory
+    inside output_dir first. Only after every staged file exists are
+    they promoted into place with os.replace — and only then does the
+    database transaction commit. A failure during rendering or staging
+    leaves docs/ exactly as it was; a failure during promotion is
+    confined to os.replace of whole files (no half-written pages).
+    The residual window — promotion succeeding but the DB commit
+    failing — leaves new files with no receipt; a rerun then
+    re-publishes (the stories are still 'new'), it never silently
+    claims the edition exists. The workflow is the other half of
+    this fix: it commits docs/ only on success.
+
+    `write_root` is False for a historical rebuild: only the dated
+    page is updated, the latest-edition copy at the root is left
+    alone. (Round 2, N2.)
+
+    `generated_at` overrides the "Generated ..." stamp. A rebuild
+    passes the original edition's timestamp so the re-rendered page
+    is identical to the original. (Round 2, N2.) `created_at` likewise
+    overrides the receipt timestamp a rebuild records, so the edition
+    receipt itself does not change on a rebuild.
     """
     import state  # local import so `python3 publish.py` works from repo root
 
@@ -182,39 +220,52 @@ def publish(conn, sections, stats, failures, run_date, output_dir, run_id=""):
         template = Template(f.read())
 
     archive_dates = state.get_past_edition_dates(conn)
-    generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+    if generated_at is None:
+        generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    edition_dir = os.path.join(output_dir, run_date)
-    os.makedirs(edition_dir, exist_ok=True)
-    edition_path = os.path.join(edition_dir, "index.html")
-    _atomic_write(
-        edition_path,
-        _render_page(template, run_date, total, sections, failures,
-                     archive_dates, generated_at, prefix=".."),
-    )
+    dated_html = _render_page(template, run_date, total, sections, failures,
+                              archive_dates, generated_at, prefix="..")
+    root_html = _render_page(template, run_date, total, sections, failures,
+                             archive_dates, generated_at, prefix="")
 
-    # Latest edition copy at the site root, so the Pages URL always shows
-    # the newest briefing. It is rendered separately: from the root the
-    # stylesheet and archive links need no '..' prefix.
-    _atomic_write(
-        os.path.join(output_dir, "index.html"),
-        _render_page(template, run_date, total, sections, failures,
-                     archive_dates, generated_at, prefix=""),
-    )
-    _atomic_copy(
-        os.path.join(ROOT, "templates", "style.css"),
-        os.path.join(output_dir, "style.css"),
-    )
+    # Render order for the manifest: section order, then pick order
+    # within each section — the exact order the pages display.
+    ordered = [(item["id"], section)
+               for section in SECTION_ORDER
+               for item in sections.get(section, [])]
 
-    # Only now are the stories marked shown and the edition recorded —
-    # in a single transaction, so a failed write never burns them and
-    # the receipt can never go missing while the stories are marked.
+    staging = os.path.join(output_dir, f".staging-{run_id or os.getpid()}")
+    os.makedirs(staging, exist_ok=True)
+    try:
+        _atomic_write(os.path.join(staging, "dated.html"), dated_html)
+        if write_root:
+            _atomic_write(os.path.join(staging, "root.html"), root_html)
+            _atomic_copy(os.path.join(ROOT, "templates", "style.css"),
+                         os.path.join(staging, "style.css"))
+
+        edition_dir = os.path.join(output_dir, run_date)
+        os.makedirs(edition_dir, exist_ok=True)
+        os.replace(os.path.join(staging, "dated.html"),
+                   os.path.join(edition_dir, "index.html"))
+        if write_root:
+            os.replace(os.path.join(staging, "root.html"),
+                       os.path.join(output_dir, "index.html"))
+            os.replace(os.path.join(staging, "style.css"),
+                       os.path.join(output_dir, "style.css"))
+    finally:
+        shutil.rmtree(staging, ignore_errors=True)
+
+    # Only now are the stories marked shown, the manifest recorded and
+    # the edition receipt written — in a single transaction, so a failed
+    # write never burns them and the receipt can never go missing while
+    # the stories are marked.
     ids = [item["id"] for items in sections.values() for item in items]
     state.record_published_edition(
         conn, ids, run_date, f"{run_date}/index.html", total,
-        datetime.now(timezone.utc).isoformat(), run_id=run_id,
+        created_at or datetime.now(timezone.utc).isoformat(),
+        run_id=run_id, ordered=ordered,
     )
-    return "published", total, edition_path
+    return "published", total, os.path.join(edition_dir, "index.html")
 
 
 if __name__ == "__main__":
