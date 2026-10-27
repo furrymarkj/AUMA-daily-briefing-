@@ -14,6 +14,13 @@ Rules from the design:
   - Partial source failures are shown in the edition, not hidden.
   - Items are marked 'shown' in the database only after the files are
     written, so a failed publish never burns the stories.
+  - Files are written atomically (temp file + rename) so a failure can
+    never leave a half-written page, and the shown-marking and the
+    edition receipt commit together, so the database cannot say an
+    edition exists that was never recorded (or vice versa).
+  - Links are relative to each page's own location: the dated page sits
+    one directory down from the site root, the latest-edition copy sits
+    at the root, and each gets the prefix its location needs.
 
 Run directly to test rendering on whatever is picked in the database:
     python3 publish.py
@@ -103,11 +110,37 @@ def render_failures(failures):
     )
 
 
-def render_archive(archive_dates, current_date):
+def _rel(prefix, target):
+    """A site-relative link from a page whose directory is `prefix` deep.
+
+    The dated page lives in <date>/ (prefix '..'), the latest-edition
+    copy lives at the root (prefix ''). A leading '/' would mean the
+    domain root, which is wrong for a project Pages site, so the prefix
+    is joined only when it is non-empty.
+    """
+    return f"{prefix}/{target}" if prefix else target
+
+
+def _atomic_write(path, content):
+    """Write content to path via a temp file + rename: never half-written."""
+    tmp = f"{path}.tmp-{os.getpid()}"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(content)
+    os.replace(tmp, path)
+
+
+def _atomic_copy(src, dst):
+    """Copy a file via a temp file + rename: never half-written."""
+    tmp = f"{dst}.tmp-{os.getpid()}"
+    shutil.copyfile(src, tmp)
+    os.replace(tmp, dst)
+
+
+def render_archive(archive_dates, current_date, prefix=""):
     if not archive_dates:
         return ""
     links = "".join(
-        f'<li><a href="{d}/index.html">{d}</a></li>'
+        f'<li><a href="{_rel(prefix, d + "/index.html")}">{d}</a></li>'
         for d in archive_dates
         if d != current_date
     )
@@ -116,7 +149,21 @@ def render_archive(archive_dates, current_date):
     return f'<nav class="archive"><h2>Past editions</h2><ul>{links}</ul></nav>'
 
 
-def publish(conn, sections, stats, failures, run_date, output_dir):
+def _render_page(template, run_date, total, sections, failures, archive_dates,
+                 generated_at, prefix):
+    """One page's HTML, with links relative to that page's location."""
+    return template.substitute(
+        date=run_date,
+        item_count=total,
+        sections_html=render_sections(sections),
+        failures_html=render_failures(failures),
+        archive_html=render_archive(archive_dates, run_date, prefix),
+        generated_at=generated_at,
+        css_href=_rel(prefix, "style.css"),
+    )
+
+
+def publish(conn, sections, stats, failures, run_date, output_dir, run_id=""):
     """Write the edition. Returns ('published'|'failed', item_count, path).
 
     On 'failed' nothing is written and the previous edition stays live.
@@ -127,7 +174,7 @@ def publish(conn, sections, stats, failures, run_date, output_dir):
     if total == 0:
         state.record_edition(
             conn, run_date, "", 0,
-            datetime.now(timezone.utc).isoformat(), "failed",
+            datetime.now(timezone.utc).isoformat(), "failed", run_id=run_id,
         )
         return "failed", 0, ""
 
@@ -137,37 +184,35 @@ def publish(conn, sections, stats, failures, run_date, output_dir):
     archive_dates = state.get_past_edition_dates(conn)
     generated_at = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
-    page_html = template.substitute(
-        date=run_date,
-        item_count=total,
-        sections_html=render_sections(sections),
-        failures_html=render_failures(failures),
-        archive_html=render_archive(archive_dates, run_date),
-        generated_at=generated_at,
-    )
-
     edition_dir = os.path.join(output_dir, run_date)
     os.makedirs(edition_dir, exist_ok=True)
     edition_path = os.path.join(edition_dir, "index.html")
-    with open(edition_path, "w", encoding="utf-8") as f:
-        f.write(page_html)
+    _atomic_write(
+        edition_path,
+        _render_page(template, run_date, total, sections, failures,
+                     archive_dates, generated_at, prefix=".."),
+    )
 
     # Latest edition copy at the site root, so the Pages URL always shows
-    # the newest briefing. The archive list on the page links back.
-    shutil.copyfile(edition_path, os.path.join(output_dir, "index.html"))
-    shutil.copyfile(
+    # the newest briefing. It is rendered separately: from the root the
+    # stylesheet and archive links need no '..' prefix.
+    _atomic_write(
+        os.path.join(output_dir, "index.html"),
+        _render_page(template, run_date, total, sections, failures,
+                     archive_dates, generated_at, prefix=""),
+    )
+    _atomic_copy(
         os.path.join(ROOT, "templates", "style.css"),
         os.path.join(output_dir, "style.css"),
     )
 
-    # Only now are the stories marked shown — a failed write never burns them.
+    # Only now are the stories marked shown and the edition recorded —
+    # in a single transaction, so a failed write never burns them and
+    # the receipt can never go missing while the stories are marked.
     ids = [item["id"] for items in sections.values() for item in items]
-    if ids:
-        state.mark_shown(conn, ids, run_date)
-
-    state.record_edition(
-        conn, run_date, f"{run_date}/index.html", total,
-        datetime.now(timezone.utc).isoformat(), "published",
+    state.record_published_edition(
+        conn, ids, run_date, f"{run_date}/index.html", total,
+        datetime.now(timezone.utc).isoformat(), run_id=run_id,
     )
     return "published", total, edition_path
 
