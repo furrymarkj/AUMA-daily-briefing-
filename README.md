@@ -83,13 +83,15 @@ back to `main`, so delivery history persists between runs.
 
 > **Heads-up:** GitHub Pages on a free account only serves **public**
 > repositories. This repo is public, and the published site contains
-> public news links only — no personal data, no credentials. Note that
-> the repository also contains the committed state database
-> (`state/briefing.db`), which holds story URLs, titles, scores, and
-> any feedback notes entered through `feedback.py`. Do not put private
-> information (customer pricing, contact details, internal notes) into
-> feedback notes or change requests; keep those in the private
-> AUMA library instead.
+> public news links only — no personal data, no credentials. The
+> repository also contains the committed state database
+> (`state/briefing.db`), which holds story URLs, titles, and scores
+> only. Feedback entered through `feedback.py` (ratings, notes, change
+> requests) is stored separately in `feedback.db`, which is gitignored
+> and never committed — do not put private information (customer
+> pricing, contact details, internal notes) into feedback notes or
+> change requests in any case; keep those in the private AUMA library
+> instead.
 
 ## Tune your interests
 
