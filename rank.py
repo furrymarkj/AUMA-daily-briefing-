@@ -20,11 +20,13 @@ usual interests. Wildcards obey the same total and per-source caps.
 
 Company matching: distinctive names match case-insensitively. Short or
 common-word names (Total, Shell, Dow, Beck, ...) match case-sensitively
-and only with supporting context — a company suffix after the name, or
-a domain cue word in the text — so "Dow Jones" or "Beck resigns" does
-not tag a company. When several records share one alias, the story is
-attributed to the record that owns the alias (the parent company), not
-to every facility that lists it.
+and only with supporting context near the name — a company suffix after
+any occurrence, or a domain cue word within 12 words of an occurrence —
+so "Dow Jones" or "Beck resigns" does not tag a company. "EAST Texas"
+as a place name is rejected unless company evidence is present. When
+several records share one alias, the story is attributed to the record
+that owns the alias (the parent company), not to every facility that
+lists it.
 
 Run directly to test ranking on whatever is in the database:
     python3 rank.py
@@ -33,6 +35,7 @@ Run directly to test ranking on whatever is in the database:
 import json
 import os
 import re
+import unicodedata
 from datetime import datetime, timedelta, timezone
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -79,27 +82,45 @@ def company_match(text, name):
     """True if a company name matches, with context for ambiguous names.
 
     Distinctive names match on the word alone. A short or common-word
-    name (in CASE_SENSITIVE_NAMES) also needs a company suffix within
-    the next few words ("Shell Oil Company", "Beck Inc.") or a domain
-    cue word in the text ("Beck Automation"), so an unrelated use of
-    the same word does not tag the company.
+    name (in CASE_SENSITIVE_NAMES) also needs a company suffix near the
+    name ("Shell Oil Company", "Beck Inc.") or a domain cue word near
+    the name ("Beck Automation"), so an unrelated use of the same word
+    does not tag the company.
+
+    (Round 2, N5: the cue used to be valid anywhere in the whole
+    article — a refinery mentioned in an unrelated paragraph could
+    validate an ambiguous name in the headline. Now the evidence must
+    sit near the matched name itself: a suffix among the next 3 words
+    after ANY occurrence, or a domain cue within 12 words either side
+    of an occurrence. The EAST geographic guard below rejects "EAST
+    Texas" as a place name unless company evidence is present.)
     """
     if not word_match(text, name):
         return False
     if name.lower() not in CASE_SENSITIVE_NAMES:
         return True
-    # Suffix: a company suffix among the next few words after the name.
     pattern = r"\b" + re.escape(name) + r"\b"
-    match = re.search(pattern, text)
-    if match:
-        after = text[match.end():].strip()
-        words = [w.lower().rstrip(".") for w in
-                 re.split(r"[\s,;:.()]+", after)[:3] if w]
-        if any(w in COMPANY_SUFFIXES for w in words):
+    # Split the text into words once, with the word index of each match.
+    words = [(m.group(0), m.start()) for m in re.finditer(r"\S+", text)]
+    lowered_words = [w.lower().rstrip(".") for w, _ in words]
+    for m in re.finditer(pattern, text):
+        # Word index of this occurrence.
+        idx = next(i for i, (_, pos) in enumerate(words) if pos >= m.start())
+        # Suffix: a company suffix among the next 3 words after the name.
+        after = lowered_words[idx + 1:idx + 4]
+        if any(w in COMPANY_SUFFIXES for w in after):
             return True
-    lowered = text.lower()
-    return any(re.search(r"\b" + re.escape(cue) + r"\b", lowered)
-               for cue in DOMAIN_CUES)
+        # Geographic guard for EAST: "EAST Texas" is a place, not the
+        # company, unless a suffix follows or the full company name
+        # ("Electric Actuator Service") appears in the text.
+        if name == "EAST" and after and after[0] == "texas":
+            if "electric actuator service" not in text.lower():
+                continue
+        # Domain cue: within 12 words either side of this occurrence.
+        window = lowered_words[max(0, idx - 12):idx + 13]
+        if any(w in DOMAIN_CUES for w in window):
+            return True
+    return False
 
 
 def match_companies(text, companies, competitors):
@@ -223,8 +244,17 @@ def score_candidate(cand, interests, customers, competitors, now):
 
 
 def normalize_title(title):
-    """Normalize for dedupe: lowercase, strip common prefixes/suffixes."""
-    text = title.lower().strip()
+    """Normalize for dedupe: lowercase, strip common prefixes/suffixes.
+
+    Unicode-safe (round 2, N7): NFKD-normalize and fold accents first,
+    so "café" and "cafe" share a fingerprint. A title that folds to
+    nothing (entirely non-Latin script) falls back to its lowercased
+    original with punctuation collapsed, so it still dedupes exactly
+    instead of colliding on an empty key.
+    """
+    text = unicodedata.normalize("NFKD", title or "")
+    text = "".join(c for c in text if not unicodedata.combining(c))
+    text = text.encode("ascii", "ignore").decode("ascii").lower().strip()
     for prefix in ("breaking news:", "breaking:", "product news:", "news:"):
         if text.startswith(prefix):
             text = text[len(prefix):].strip()
@@ -235,15 +265,25 @@ def normalize_title(title):
         head = text.rsplit(" - ", 1)[0]
         if len(head) >= 30:
             text = head
-    return re.sub(r"[^a-z0-9]+", " ", text).strip()
+    key = re.sub(r"[^a-z0-9]+", " ", text).strip()
+    if key:
+        return key
+    raw = (title or "").lower().strip()
+    return re.sub(r"\s+", " ", raw) if raw else ""
 
 
-def rank(conn, config_dir, now):
+def rank(conn, config_dir, now, edition_date=None):
     """Score new candidates and pick the edition. Returns (sections, stats).
 
     sections: {'industry': [...], 'competitors': [...], 'customers': [...],
                'wildcard': [...]} with candidates sorted by score, then
     recency. stats: counts for the run summary.
+
+    `edition_date` is the date of the edition being built (YYYY-MM-DD).
+    The cross-day title-dedupe window is calculated from it when given,
+    so a backdated --date run judges eligibility against its own date
+    instead of today. (Round 2, N10.) When omitted it defaults to
+    today's date, which is the normal daily-run behaviour.
     """
     import state  # local import so `python3 rank.py` works from repo root
 
@@ -275,7 +315,9 @@ def rank(conn, config_dir, now):
 
     # Titles shown in recent editions: the same story must not be
     # published again under a different URL.
-    since = (now - timedelta(days=title_lookback_days)).date().isoformat()
+    ref_date = edition_date or now.date().isoformat()
+    since = (datetime.fromisoformat(ref_date).date()
+             - timedelta(days=title_lookback_days)).isoformat()
     recent_titles = state.get_recent_title_keys(conn, since)
 
     candidates = state.get_new_candidates(conn)
@@ -284,8 +326,10 @@ def rank(conn, config_dir, now):
     for cand in candidates:
         # The section the story was collected under (a search recipe's
         # hint, or a feed's default). It is the fallback when no company
-        # matches; company identification wins when it does.
-        orig_section = cand.get("section", "industry")
+        # matches; company identification wins when it does. Read from
+        # source_section — the collection-time hint — not from section,
+        # which ranking overwrites. (Round 2, N6.)
+        orig_section = cand.get("source_section") or cand.get("section", "industry")
         # Publisher-feed trust bonus lives on the feed config, not the row.
         feed = feeds.get(cand.get("source", ""))
         cand["trust"] = feed.get("trust", 0) if feed else 0
@@ -370,12 +414,25 @@ def rank(conn, config_dir, now):
     # rest of the edition. The whole pool is scanned, not just the first
     # few, so a duplicate at the top cannot starve the section.
     wildcard_pool.sort(key=lambda c: c.get("published", ""), reverse=True)
+    # Candidates that lose ONLY on a capacity cap (wildcard/total/
+    # per-source) stay 'new' for tomorrow — they were never rejected.
+    # Only durable rejections (duplicate title here; age/exclusion/low
+    # score earlier) are skipped. (Round 2, N4: the old code skipped
+    # every unpicked pool candidate, including cap losers.)
+    cap_losers = set()
     for cand in wildcard_pool:
         if len(picked["wildcard"]) >= caps.get("wildcard", 3):
+            cap_losers.update(c["id"] for c in wildcard_pool
+                              if c["id"] not in
+                              {p["id"] for sec in picked.values() for p in sec})
             break
         if sum(len(v) for v in picked.values()) >= caps.get("total", 25):
+            cap_losers.update(c["id"] for c in wildcard_pool
+                              if c["id"] not in
+                              {p["id"] for sec in picked.values() for p in sec})
             break
         if per_source.get(cand["source"], 0) >= caps.get("per_source", 5):
+            cap_losers.add(cand["id"])
             continue
         title_key = normalize_title(cand["title"])
         if title_key in seen_titles:
@@ -392,10 +449,15 @@ def rank(conn, config_dir, now):
     # that the main loop already picked is not rejected at all.
     picked_ids = {c["id"] for sec in picked.values() for c in sec}
     for cand in wildcard_pool:
-        if cand["id"] not in picked_ids:
+        if cand["id"] not in picked_ids and cand["id"] not in cap_losers:
             to_skip.append(cand["id"])
     if to_skip:
         state.mark_skipped(conn, sorted(set(to_skip)))
+
+    # Persist the scores. update_scored() does not commit by itself,
+    # and leaving the transaction open blocks other connections to
+    # this database (e.g. feedback.py) until the caller commits.
+    conn.commit()
 
     return picked, stats
 
