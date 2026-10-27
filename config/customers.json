@@ -1,0 +1,1196 @@
+{
+  "_comment": "Seeded 2026-10-26 from the LinkedIn customer watchlist (AUMA Digital Library). Tiers: 1 = audited 2026-27 targets, 2 = visited open leads, 3 = OEM Master TOP 50, 4 = major end users & EPCs, 5 = Oct 7, 2026 open opportunities. DXP Enterprises and DXP Water are SEPARATE companies. Ross Valve is a customer contact (LinkedIn). Edit this file to add/remove companies; variants are alternate names to match on.",
+  "customers": [
+    {
+      "name": "N-Line Valves",
+      "tier": 1,
+      "type": "Direct valve OEM (TOP 50: Former/Dormant)",
+      "variants": [
+        "N-Line"
+      ]
+    },
+    {
+      "name": "Automated Valve & Control",
+      "tier": 1,
+      "type": "Valve automation integrator",
+      "variants": [
+        "AVC"
+      ]
+    },
+    {
+      "name": "Ranger Energy Products LLC",
+      "tier": 1,
+      "type": "Valve stockholder/distributor; also Integrator/OEM (open leads)",
+      "variants": []
+    },
+    {
+      "name": "Worldwide Oilfield Machine, Inc (WOM)",
+      "tier": 1,
+      "type": "OEM (open leads)",
+      "variants": [
+        "WOM",
+        "Worldwide Oilfield Machine"
+      ]
+    },
+    {
+      "name": "KWS MFG Co. Ltd.",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "RK Pump & Supply",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "AWC Inc",
+      "tier": 1,
+      "type": "Valve automation integrator (TOP 50: Needs Verification)",
+      "variants": []
+    },
+    {
+      "name": "United Valve",
+      "tier": 1,
+      "type": "Retrofit / service",
+      "variants": []
+    },
+    {
+      "name": "Luminant Generation Co",
+      "tier": 1,
+      "type": "Power generation (end user)",
+      "variants": [
+        "Luminant",
+        "Vistra"
+      ]
+    },
+    {
+      "name": "AZ Valves North America, LLP",
+      "tier": 1,
+      "type": "Direct valve OEM (TOP 50: Former/Dormant)",
+      "variants": [
+        "AZ Valves"
+      ]
+    },
+    {
+      "name": "Senior Flexonics",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "MMBR Systems, Inc.",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "SAMSON CONTROLS INC",
+      "tier": 1,
+      "type": "Direct valve OEM (TOP 50: Quoted Prospect)",
+      "variants": [
+        "SAMSON",
+        "Samson Controls"
+      ]
+    },
+    {
+      "name": "Oak Grove Management Co LLC",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Forum US, Inc",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Oil States Industries",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "GE Steam Power, Inc.",
+      "tier": 1,
+      "type": "Power generation",
+      "variants": [
+        "GE Vernova",
+        "GE Steam Power"
+      ]
+    },
+    {
+      "name": "BOARDWALK LOUISIAN MIDSTREAM LLC",
+      "tier": 1,
+      "type": "Midstream (end user)",
+      "variants": []
+    },
+    {
+      "name": "Formosa Plastics",
+      "tier": 1,
+      "type": "Chemical / plastics (end user)",
+      "variants": [
+        "Formosa"
+      ]
+    },
+    {
+      "name": "Automation Technology LLC",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Legacy Flow Control",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Town of Pecos City, Texas",
+      "tier": 1,
+      "type": "Municipal water/wastewater",
+      "variants": []
+    },
+    {
+      "name": "Everest Valve Company",
+      "tier": 1,
+      "type": "Direct valve OEM",
+      "variants": []
+    },
+    {
+      "name": "SpawGlass",
+      "tier": 1,
+      "type": "Construction (EPC-adjacent)",
+      "variants": []
+    },
+    {
+      "name": "Lonestar Actuation, Inc.",
+      "tier": 1,
+      "type": "Actuation (channel)",
+      "variants": [
+        "Lonestar Actuation"
+      ]
+    },
+    {
+      "name": "Fiber Glass Systems, L.P.",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Team Industrial – Lake Charles",
+      "tier": 1,
+      "type": "Industrial services",
+      "variants": []
+    },
+    {
+      "name": "Quail Run Energy Partners, LP",
+      "tier": 1,
+      "type": "Power generation",
+      "variants": []
+    },
+    {
+      "name": "Jah Con Instrumentation LLC",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Core & Main LP",
+      "tier": 1,
+      "type": "Valve stockholder/distributor",
+      "variants": [
+        "Core & Main"
+      ]
+    },
+    {
+      "name": "NTS (Neil Technical Services, Corp)",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Brazos River Authority",
+      "tier": 1,
+      "type": "Municipal water authority",
+      "variants": [
+        "Brazos River Authority"
+      ]
+    },
+    {
+      "name": "Ebro Armaturen, USA",
+      "tier": 1,
+      "type": "Valve OEM (EBRO)",
+      "variants": [
+        "Ebro",
+        "EBRO Armaturen"
+      ]
+    },
+    {
+      "name": "Calpine Operating Services",
+      "tier": 1,
+      "type": "Power generation (end user)",
+      "variants": []
+    },
+    {
+      "name": "Rayburn Energy Station LLC",
+      "tier": 1,
+      "type": "Power generation",
+      "variants": []
+    },
+    {
+      "name": "City of Abilene – Texas",
+      "tier": 1,
+      "type": "Municipal water/wastewater",
+      "variants": []
+    },
+    {
+      "name": "City of Gonzales, Texas",
+      "tier": 1,
+      "type": "Municipal water/wastewater",
+      "variants": []
+    },
+    {
+      "name": "Brewster Procurement Group",
+      "tier": 1,
+      "type": "Procurement",
+      "variants": []
+    },
+    {
+      "name": "International Paper",
+      "tier": 1,
+      "type": "Industrial (end user)",
+      "variants": []
+    },
+    {
+      "name": "Team Industrial Services",
+      "tier": 1,
+      "type": "Industrial services",
+      "variants": []
+    },
+    {
+      "name": "Cortec Fluid Control",
+      "tier": 1,
+      "type": "Direct valve OEM",
+      "variants": [
+        "Cortec"
+      ]
+    },
+    {
+      "name": "Delval Flow Controls USA, LLC",
+      "tier": 1,
+      "type": "Direct valve OEM",
+      "variants": [
+        "DelVal",
+        "Delval Flow Controls"
+      ]
+    },
+    {
+      "name": "Setpoint Integrated Solutions",
+      "tier": 1,
+      "type": "Retrofit / service",
+      "variants": [
+        "Setpoint"
+      ]
+    },
+    {
+      "name": "Texas Specialty Sands LLC",
+      "tier": 1,
+      "type": "Industrial",
+      "variants": []
+    },
+    {
+      "name": "Valsource International, LLC",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Sayatva",
+      "tier": 1,
+      "type": "Direct valve OEM (TOP 50: Quoted Prospect)",
+      "variants": []
+    },
+    {
+      "name": "J&D sales",
+      "tier": 1,
+      "type": "—",
+      "variants": [
+        "J&D Actuation"
+      ]
+    },
+    {
+      "name": "Edgen Murray",
+      "tier": 1,
+      "type": "Distribution (pipe/valve supply)",
+      "variants": []
+    },
+    {
+      "name": "DXP Enterprises",
+      "tier": 1,
+      "type": "Distribution (DXP Water is a separate company — see note below; do not merge)",
+      "variants": [
+        "DXP Enterprises"
+      ],
+      "note": "Separate company from DXP Water. Do not merge."
+    },
+    {
+      "name": "Bristol-Myers Squibb",
+      "tier": 1,
+      "type": "Pharma (end user)",
+      "variants": []
+    },
+    {
+      "name": "SIT (Supreme Integrated Technology)",
+      "tier": 1,
+      "type": "Offshore/subsea systems",
+      "variants": [
+        "SIT",
+        "Supreme Integrated Technology"
+      ]
+    },
+    {
+      "name": "A-T Controls",
+      "tier": 1,
+      "type": "Valve automation integrator (TOP 50: Quoted Prospect)",
+      "variants": [
+        "A-T Controls Inc"
+      ]
+    },
+    {
+      "name": "A&M Equipment",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Craig International",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "New Gen Products",
+      "tier": 1,
+      "type": "Valve automation integrator",
+      "variants": []
+    },
+    {
+      "name": "Celtex Industries",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Kingrey Industries",
+      "tier": 1,
+      "type": "Valve stockholder/distributor (TOP 50: Quoted Prospect)",
+      "variants": []
+    },
+    {
+      "name": "ANIX Valves",
+      "tier": 1,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Worley",
+      "tier": 1,
+      "type": "EPC — Texas LNG",
+      "variants": [
+        "WorleyParsons"
+      ]
+    },
+    {
+      "name": "R4 Specialties",
+      "tier": 1,
+      "type": "Valve stockholder/distributor",
+      "variants": []
+    },
+    {
+      "name": "Atwell",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "Exxon – Corpus Christi",
+      "tier": 1,
+      "type": "Oil & gas (end user)",
+      "variants": [
+        "Exxon",
+        "ExxonMobil"
+      ]
+    },
+    {
+      "name": "Motiva – La Porte",
+      "tier": 1,
+      "type": "Refining (end user)",
+      "variants": [
+        "Motiva"
+      ]
+    },
+    {
+      "name": "Adams Valve",
+      "tier": 1,
+      "type": "Direct valve OEM",
+      "variants": []
+    },
+    {
+      "name": "San Patricio Municipal",
+      "tier": 1,
+      "type": "Municipal water",
+      "variants": []
+    },
+    {
+      "name": "Zwick Valves",
+      "tier": 1,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Fluid Process and Pumps",
+      "tier": 1,
+      "type": "—",
+      "variants": []
+    },
+    {
+      "name": "City of Slidell",
+      "tier": 1,
+      "type": "Municipal water/wastewater (LA)",
+      "variants": []
+    },
+    {
+      "name": "ONEOK Hydrocarbon SW – Mont Belvieu FM 1942",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "ONEOK"
+      ]
+    },
+    {
+      "name": "Master Flo Valve USA – Houston",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": [
+        "Master Flo",
+        "Master Flo Valve"
+      ]
+    },
+    {
+      "name": "ExxonMobil Houston",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "ExxonMobil",
+        "Exxon"
+      ]
+    },
+    {
+      "name": "Valero Energy Corporation – San Antonio HQ",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "Valero"
+      ]
+    },
+    {
+      "name": "Air Products – La Porte",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "Air Products"
+      ]
+    },
+    {
+      "name": "NOV – Houston Richmond Ave",
+      "tier": 2,
+      "type": "Master Distribution",
+      "variants": [
+        "NOV",
+        "National Oilwell Varco"
+      ]
+    },
+    {
+      "name": "Dow – Texas City",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "Dow",
+        "Dow Chemical"
+      ]
+    },
+    {
+      "name": "Ranger Energy Products",
+      "tier": 2,
+      "type": "Integrator / OEM",
+      "variants": []
+    },
+    {
+      "name": "Warren Valve",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "J2 Resources, LLC",
+      "tier": 2,
+      "type": "Distribution",
+      "variants": []
+    },
+    {
+      "name": "Nabors Drilling Technologies USA, Inc.",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "Chevron",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "Chevron"
+      ]
+    },
+    {
+      "name": "ExxonMobil",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "Valero",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "Halliburton",
+      "tier": 2,
+      "type": "End User",
+      "variants": [
+        "Halliburton"
+      ]
+    },
+    {
+      "name": "Iscola Valves & Controls",
+      "tier": 2,
+      "type": "Rep",
+      "variants": [
+        "Iscola",
+        "ISCOLA Inc."
+      ]
+    },
+    {
+      "name": "SCV Valve",
+      "tier": 2,
+      "type": "OEM",
+      "variants": [
+        "SCV Valve"
+      ]
+    },
+    {
+      "name": "Worldwide Oilfield Machine Inc. USA (WOM)",
+      "tier": 2,
+      "type": "OEM",
+      "variants": []
+    },
+    {
+      "name": "ADS Services",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Cortec",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Texas International Terminals",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "H&H Control Solutions",
+      "tier": 2,
+      "type": "Distribution",
+      "variants": []
+    },
+    {
+      "name": "Samson",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Calpine Corporation",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "OMB Valves",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": [
+        "OMB",
+        "OMB Valves",
+        "Vogt Valves"
+      ]
+    },
+    {
+      "name": "Dow",
+      "tier": 2,
+      "type": "End User",
+      "variants": []
+    },
+    {
+      "name": "PK Industrial Supply",
+      "tier": 2,
+      "type": "Integrator / OEM",
+      "variants": []
+    },
+    {
+      "name": "Genesis Systems",
+      "tier": 2,
+      "type": "Rep",
+      "variants": [
+        "Genesis Systems",
+        "Sunbelt Supply"
+      ]
+    },
+    {
+      "name": "Adams Valves",
+      "tier": 2,
+      "type": "Valve OEM",
+      "variants": []
+    },
+    {
+      "name": "Municipal Valve & Equipment",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": [
+        "Municipal Valve and Equipment",
+        "MVE"
+      ]
+    },
+    {
+      "name": "J&S Valve",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": []
+    },
+    {
+      "name": "Industrial Flow North America LLC (LEWA America)",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": [
+        "LEWA",
+        "LEWA America",
+        "Industrial Flow North America"
+      ]
+    },
+    {
+      "name": "ValvTechnologies",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": [
+        "ValvTechnologies Inc"
+      ]
+    },
+    {
+      "name": "Southwest Valve Inc",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": []
+    },
+    {
+      "name": "Sunbelt Supply",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": []
+    },
+    {
+      "name": "Great Western Valve Inc",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": []
+    },
+    {
+      "name": "Alfa Laval Inc",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": []
+    },
+    {
+      "name": "John H. Carter / ControlWorx",
+      "tier": 3,
+      "type": "Former / Dormant Customer",
+      "variants": []
+    },
+    {
+      "name": "Hatfield and Company",
+      "tier": 3,
+      "type": "Quoted Prospect",
+      "variants": []
+    },
+    {
+      "name": "Valmet Flow Control",
+      "tier": 3,
+      "type": "Quoted Prospect",
+      "variants": [
+        "Valmet"
+      ]
+    },
+    {
+      "name": "Lone Star Turbo",
+      "tier": 3,
+      "type": "Established Contact",
+      "variants": []
+    },
+    {
+      "name": "FluoroSeal Group USA",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": []
+    },
+    {
+      "name": "Bray International",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": [
+        "Bray",
+        "Bray Controls"
+      ]
+    },
+    {
+      "name": "Cornerstone Valve",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": []
+    },
+    {
+      "name": "Puffer-Sweiven",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": [
+        "Puffer Sweiven"
+      ]
+    },
+    {
+      "name": "Remington Valve",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": []
+    },
+    {
+      "name": "Butterfly Valves & Controls Inc",
+      "tier": 3,
+      "type": "Needs Verification — CRM record only",
+      "variants": []
+    },
+    {
+      "name": "SWI Valve Corporation",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "4E Valve",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "AIV",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "BBP",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "Valveconn",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "Valve City",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "Envasco",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "Valves & Fittings",
+      "tier": 3,
+      "type": "New Prospect — provisional",
+      "variants": []
+    },
+    {
+      "name": "International Standard Valve (ISV)",
+      "tier": 3,
+      "type": "Existing Customer",
+      "variants": [
+        "ISV",
+        "International Standard Valve"
+      ]
+    },
+    {
+      "name": "Dow Chemical – Freeport; Dow – Deer Park (Tidal Road)",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": [
+        "Dow",
+        "Dow Chemical"
+      ]
+    },
+    {
+      "name": "Wood Group Mustang – Houston HQ and all Houston locations",
+      "tier": 4,
+      "type": "EPC / engineering",
+      "variants": [
+        "Wood Group",
+        "Wood Group Mustang",
+        "John Wood Group"
+      ]
+    },
+    {
+      "name": "Kellogg Brown & Root (KBR) – Houston (Jefferson)",
+      "tier": 4,
+      "type": "EPC",
+      "variants": [
+        "KBR",
+        "Kellogg Brown & Root"
+      ]
+    },
+    {
+      "name": "DNOW – Houston Eldridge (HQ)",
+      "tier": 4,
+      "type": "Distribution (pipe/valve/supply)",
+      "variants": [
+        "DNOW",
+        "DistributionNOW"
+      ]
+    },
+    {
+      "name": "Fluor – Sugar Land",
+      "tier": 4,
+      "type": "EPC",
+      "variants": [
+        "Fluor"
+      ]
+    },
+    {
+      "name": "Pentair Valves & Controls – Stafford Plant; Houston HQ Clay Road; Houston",
+      "tier": 4,
+      "type": "Valve OEM / manufacturer",
+      "variants": [
+        "Pentair",
+        "Pentair Valves & Controls"
+      ]
+    },
+    {
+      "name": "Ascend Performance Materials – Alvin",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": []
+    },
+    {
+      "name": "Bechtel – Houston",
+      "tier": 4,
+      "type": "EPC",
+      "variants": [
+        "Bechtel"
+      ]
+    },
+    {
+      "name": "Jacobs – Houston Tower 1 – South",
+      "tier": 4,
+      "type": "EPC / engineering",
+      "variants": [
+        "Jacobs"
+      ]
+    },
+    {
+      "name": "Motiva – Port Arthur (Houston Ave)",
+      "tier": 4,
+      "type": "Refining (end user)",
+      "variants": [
+        "Motiva"
+      ]
+    },
+    {
+      "name": "Covestro – Baytown (formerly Bayer Material Science)",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": [
+        "Covestro",
+        "Bayer Material Science"
+      ]
+    },
+    {
+      "name": "MRC McJunkin Red Man – Houston (MRC Global; OEM master lists parent DNOW Inc.)",
+      "tier": 4,
+      "type": "Distribution",
+      "variants": [
+        "MRC",
+        "MRC Global",
+        "McJunkin Red Man"
+      ]
+    },
+    {
+      "name": "Turbine Air Systems (TAS) – Houston",
+      "tier": 4,
+      "type": "Power / energy systems",
+      "variants": [
+        "TAS",
+        "Turbine Air Systems"
+      ]
+    },
+    {
+      "name": "Enerflex Energy Systems – Houston",
+      "tier": 4,
+      "type": "Oil & gas equipment",
+      "variants": []
+    },
+    {
+      "name": "Transocean Offshore Deepwater – Houston",
+      "tier": 4,
+      "type": "Offshore drilling",
+      "variants": []
+    },
+    {
+      "name": "AMEC Foster Wheeler – Houston Dairy Ashford",
+      "tier": 4,
+      "type": "EPC",
+      "variants": []
+    },
+    {
+      "name": "Chevron Phillips Chemical – Cedar Bayou",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": [
+        "Chevron Phillips",
+        "CPChem"
+      ]
+    },
+    {
+      "name": "Technip – Houston",
+      "tier": 4,
+      "type": "EPC",
+      "variants": [
+        "Technip"
+      ]
+    },
+    {
+      "name": "WorleyParsons – Houston West Loop (now Worley)",
+      "tier": 4,
+      "type": "EPC",
+      "variants": [
+        "Worley",
+        "WorleyParsons"
+      ]
+    },
+    {
+      "name": "Shell Oil Company – Deer Park",
+      "tier": 4,
+      "type": "Refining / oil & gas",
+      "variants": [
+        "Shell"
+      ]
+    },
+    {
+      "name": "Noble Drilling Services – Sugarland",
+      "tier": 4,
+      "type": "Offshore drilling",
+      "variants": []
+    },
+    {
+      "name": "Total Refinery – Port Arthur",
+      "tier": 4,
+      "type": "Refining (end user)",
+      "variants": [
+        "Total",
+        "TotalEnergies"
+      ]
+    },
+    {
+      "name": "LyondellBasell Chemical – Channelview",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": [
+        "LyondellBasell"
+      ]
+    },
+    {
+      "name": "ExxonMobil Chemical – Beaumont",
+      "tier": 4,
+      "type": "Chemical / oil & gas",
+      "variants": [
+        "ExxonMobil",
+        "Exxon"
+      ]
+    },
+    {
+      "name": "Marathon – Texas City – Galveston Bay Refinery",
+      "tier": 4,
+      "type": "Refining (end user)",
+      "variants": [
+        "Marathon",
+        "Marathon Petroleum"
+      ]
+    },
+    {
+      "name": "BASF – Freeport",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": [
+        "BASF"
+      ]
+    },
+    {
+      "name": "IHI E&C International Corp",
+      "tier": 4,
+      "type": "EPC",
+      "variants": []
+    },
+    {
+      "name": "Freeport LNG",
+      "tier": 4,
+      "type": "LNG (end user)",
+      "variants": [
+        "Freeport LNG"
+      ]
+    },
+    {
+      "name": "Diamond Offshore Drilling – Houston",
+      "tier": 4,
+      "type": "Offshore drilling",
+      "variants": []
+    },
+    {
+      "name": "Valerus – Houston HQ",
+      "tier": 4,
+      "type": "Oil & gas equipment",
+      "variants": []
+    },
+    {
+      "name": "Exterran – Houston Brittmoore",
+      "tier": 4,
+      "type": "Oil & gas equipment",
+      "variants": []
+    },
+    {
+      "name": "Albemarle Catalysts – Pasadena Bay Park Road",
+      "tier": 4,
+      "type": "Chemical (end user)",
+      "variants": []
+    },
+    {
+      "name": "Atlas Copco Compressors – Houston",
+      "tier": 4,
+      "type": "Industrial equipment",
+      "variants": []
+    },
+    {
+      "name": "Rodney Hunt",
+      "tier": 5,
+      "type": "81 open-opportunity rows — the largest single account in Mark's open pipeline. OEM master: Rodney Hunt Inc. (CMP-0161, parent JASH USA / JASH Engineering). Water-control gates/valves.",
+      "variants": [
+        "Rodney Hunt Inc."
+      ]
+    },
+    {
+      "name": "Lhoist North America",
+      "tier": 5,
+      "type": "1 row. Lime/minerals (end user).",
+      "variants": []
+    },
+    {
+      "name": "TankLogix",
+      "tier": 5,
+      "type": "1 row.",
+      "variants": []
+    },
+    {
+      "name": "Altomar Equipment",
+      "tier": 5,
+      "type": "1 row.",
+      "variants": []
+    },
+    {
+      "name": "ElecActuatorSrvc/TX East (Electric Actuator Service of Texas, EAST)",
+      "tier": 5,
+      "type": "2 rows. OEM master CMP-0284. Actuator service.",
+      "variants": [
+        "Electric Actuator Service of Texas",
+        "EAST"
+      ]
+    },
+    {
+      "name": "North American Automation",
+      "tier": 5,
+      "type": "1 row.",
+      "variants": []
+    },
+    {
+      "name": "Valve Sales Inc. – Oklahoma",
+      "tier": 5,
+      "type": "2 rows.",
+      "variants": []
+    },
+    {
+      "name": "Schofield Automation",
+      "tier": 5,
+      "type": "1 row. OEM master CMP-0286.",
+      "variants": []
+    },
+    {
+      "name": "Ebro Armaturen USA",
+      "tier": 5,
+      "type": "1 row (also Tier 1).",
+      "variants": []
+    },
+    {
+      "name": "Atwell, LLC",
+      "tier": 5,
+      "type": "1 row (also Tier 1 \"Atwell\").",
+      "variants": []
+    },
+    {
+      "name": "DXP Water",
+      "tier": 1,
+      "type": "Water/wastewater distribution — separate company from DXP Enterprises",
+      "variants": [
+        "DXP Water"
+      ],
+      "note": "Separate company from DXP Enterprises (Mark, Oct 26, 2026). Details unverified in library."
+    },
+    {
+      "name": "Ross Valve Mfg. Co. Inc.",
+      "tier": 1,
+      "type": "Valve OEM",
+      "variants": [
+        "Ross Valve",
+        "Ross Valve Mfg"
+      ],
+      "note": "Confirmed via LinkedIn Oct 26, 2026 (Zakary Hughes, Director of Engineering). Not in library files. Do not merge with Ross Precision Manufacturing."
+    }
+  ]
+}
