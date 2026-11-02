@@ -1191,6 +1191,25 @@
         "Ross Valve Mfg"
       ],
       "note": "Confirmed via LinkedIn Oct 26, 2026 (Zakary Hughes, Director of Engineering). Not in library files. Do not merge with Ross Precision Manufacturing."
+    },
+    {
+      "name": "Western Midstream",
+      "tier": 4,
+      "type": "Midstream end user; produced water (JIP 2 reclaimed-water facility, Reeves County)",
+      "variants": [
+        "WES"
+      ],
+      "note": "Added Nov 2, 2026 per Mark's approval (Oilfield Water Weekly #388 review). On Permian deck produced-water slide."
+    },
+    {
+      "name": "Enterprise Products",
+      "tier": 4,
+      "type": "Midstream end user; Permian pipelines (Enterprise Products Partners L.P.)",
+      "variants": [
+        "Enterprise Products Partners",
+        "EPD"
+      ],
+      "note": "Added Nov 2, 2026 per Mark's approval (Oilfield Water Weekly #388 review)."
     }
   ]
 }
