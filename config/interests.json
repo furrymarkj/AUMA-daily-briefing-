@@ -1,5 +1,5 @@
 {
-  "_comment": "Interests drive scoring. Each topic has keywords and a weight. A keyword match in a headline scores weight x 2; in the summary, weight x 1. Boosts apply on top. Exclusions drop an item outright (score -1). Caps keep one publisher or subject from dominating. Tune weights here \u2014 no code changes needed.",
+  "_comment": "Interests drive scoring. Each topic has keywords and a weight. A keyword match in a headline scores weight x 2; in the summary, weight x 1. Boosts apply on top. Exclusions drop an item outright (score -1). Caps keep one publisher or subject from dominating. Tune weights here — no code changes needed.",
   "boosts": {
     "competitor_match": 12,
     "customer_match": 10,
@@ -62,7 +62,8 @@
         "water utility",
         "water infrastructure",
         "drinking water",
-        "water reuse"
+        "water reuse",
+        "produced water"
       ],
       "name": "Water & wastewater",
       "weight": 8
