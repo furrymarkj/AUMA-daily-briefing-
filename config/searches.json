@@ -26,6 +26,12 @@
       "section": "customers"
     },
     {
+      "engine": "google",
+      "query": "produced water Texas",
+      "schedule": "daily",
+      "section": "customers"
+    },
+    {
       "engine": "bing",
       "query": "water infrastructure Texas",
       "schedule": {
