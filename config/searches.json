@@ -159,6 +159,12 @@
       "schedule": "daily",
       "section": "industry",
       "fallback_for": "Water Finance & Management"
+    },
+    {
+      "engine": "google",
+      "query": "valve company acquisition OR actuator acquisition",
+      "schedule": "daily",
+      "section": "competitors"
     }
   ]
 }
