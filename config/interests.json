@@ -83,6 +83,18 @@
     },
     {
       "keywords": [
+        "rig count",
+        "Baker Hughes",
+        "frac spread",
+        "DUC inventory",
+        "drilled but uncompleted",
+        "drilling activity"
+      ],
+      "name": "Rig count & drilling activity",
+      "weight": 7
+    },
+    {
+      "keywords": [
         "EPC",
         "engineering procurement",
         "project award",
