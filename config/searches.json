@@ -165,6 +165,24 @@
       "query": "valve company acquisition OR actuator acquisition",
       "schedule": "daily",
       "section": "competitors"
+    },
+    {
+      "engine": "google",
+      "query": "Baker Hughes rig count Permian",
+      "schedule": {
+        "offset": 1,
+        "rotate": 7
+      },
+      "section": "industry"
+    },
+    {
+      "engine": "google",
+      "query": "frac spread DUC wells completions",
+      "schedule": {
+        "offset": 1,
+        "rotate": 7
+      },
+      "section": "industry"
     }
   ]
 }
