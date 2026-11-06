@@ -1,87 +1,150 @@
 {
-  "_comment": "Competitors are NEVER treated as customers. Matches here go in the Competitors section of the briefing as intel.",
-  "competitors": [
-    {
-      "name": "DeZURIK",
-      "variants": [
-        "DeZurik"
-      ],
-      "note": "Electric actuator competitor."
-    },
-    {
-      "name": "Beck",
-      "variants": [
-        "Beck Actuator",
-        "Beck Controls"
-      ],
-      "note": "Precision electric actuators."
-    },
-    {
-      "name": "Rotork",
-      "variants": [
-        "Rotork Controls",
-        "Rotork plc",
-        "Rotork IQ3"
-      ],
-      "note": "Electric actuator competitor (Rotork IQ3)."
-    },
-    {
-      "name": "Bettis",
-      "variants": [
-        "Bettis ICON",
-        "Bettis XTE",
-        "Bettis RTS"
-      ],
-      "note": "Emerson actuator brand."
-    },
-    {
-      "name": "Emerson",
-      "variants": [
-        "Emerson Automation Solutions",
-        "Emerson Final Control",
-        "Limitorque",
-        "Limitorque MX"
-      ],
-      "note": "Limitorque MX is Emerson's electric actuator line."
-    },
-    {
-      "name": "Flowserve",
-      "variants": [
-        "Flowserve Corporation",
-        "MOGAS"
-      ],
-      "note": "Competitor actuator manufacturer; MOGAS is Flowserve-owned."
-    },
-    {
-      "name": "Bernard",
-      "variants": [
-        "Bernard Controls",
-        "Bernard Intelli"
-      ],
-      "note": "Bernard Intelli actuators."
-    },
-    {
-      "name": "EIM",
-      "variants": [
-        "EIM Controls"
-      ],
-      "note": "EIM electric actuators."
-    },
-    {
-      "name": "Henry Pratt",
-      "variants": [
-        "Pratt",
-        "Henry Pratt Company",
-        "Pratt Positron"
-      ],
-      "note": "Pratt valves/actuation."
-    },
-    {
-      "name": "Scallon Controls",
-      "variants": [
-        "Scallon"
-      ],
-      "note": "Emerson Impact Partner (Beaumont, TX) — Bettis/Fisher/Crosby/DeltaV/KTM distributor. Competitor channel, not a customer."
-    }
-  ]
+ "_comment": "Competitors are NEVER treated as customers. Matches here go in the Competitors section of the briefing as intel. Corrected Nov 2, 2026 (Mark; audited against library '08 — Competitors & Market Comparisons' + web sources). Three battlegrounds: electric, electrohydraulic, gearboxes. STRUCK from the old list: DeZURIK, Henry Pratt (valve-OEM customers), Scallon Controls (Emerson distributor), BAFCO (AUMA's own line), ProMation (private-label partner).",
+ "competitors": [
+  {
+   "name": "Rotork",
+   "note": "Electric: IQ range — the #1 rival. Also electrohydraulic.",
+   "variants": [
+    "Rotork Controls",
+    "Rotork plc",
+    "Rotork IQ",
+    "Rotork IQ3"
+   ]
+  },
+  {
+   "name": "ABB",
+   "note": "Electric: acquiring Rotork (agreed Jul 16, 2026 — 506p/share, GBP 4.14 bn, completion expected H1 2027). ABB pairs Rotork IQ with its control systems/software. Added Nov 5, 2026 from FMI sample report.",
+   "variants": [
+    "ABB Ltd",
+    "ABB Group",
+    "ABB Motion",
+    "ABB Process Automation"
+   ]
+  },
+  {
+   "name": "Emerson",
+   "note": "Electric: Bettis (XTE3000, RTS), EIM electric lines, Biffi.",
+   "variants": [
+    "Emerson Automation Solutions",
+    "Emerson Final Control",
+    "Bettis",
+    "Bettis ICON",
+    "Bettis XTE",
+    "Bettis XTE3000",
+    "Bettis RTS",
+    "EIM",
+    "EIM Controls",
+    "Biffi"
+   ]
+  },
+  {
+   "name": "Flowserve Limitorque",
+   "note": "Electric: Limitorque MX; deep refinery/pipeline installed base.",
+   "variants": [
+    "Limitorque",
+    "Limitorque MX",
+    "Flowserve"
+   ]
+  },
+  {
+   "name": "Bernard Controls",
+   "note": "Electric: INTELLI+; strong in water and industrial.",
+   "variants": [
+    "Bernard",
+    "Bernard Intelli",
+    "INTELLI+"
+   ]
+  },
+  {
+   "name": "Beck",
+   "note": "Electric: precision modulating; water/wastewater strength.",
+   "variants": [
+    "Beck Actuator",
+    "Beck Controls"
+   ]
+  },
+  {
+   "name": "SIPOS",
+   "note": "Electric: German precision actuators; on internal comparison sheet.",
+   "variants": [
+    "SIPOS Aktorik"
+   ]
+  },
+  {
+   "name": "Bray Controls",
+   "note": "Electric: Series 70 quarter-turn value player.",
+   "variants": [
+    "Bray",
+    "Bray Series 70"
+   ]
+  },
+  {
+   "name": "ValvCon",
+   "note": "Electric: quarter-turn value player.",
+   "variants": []
+  },
+  {
+   "name": "Asian imports",
+   "note": "Electric: grouped watch item — I-Tork, HKC, Greatork.",
+   "variants": [
+    "I-Tork",
+    "ITork",
+    "HKC",
+    "Greatork"
+   ]
+  },
+  {
+   "name": "REXA",
+   "note": "Electrohydraulic: electraulic specialist, precise modulating.",
+   "variants": []
+  },
+  {
+   "name": "Emerson Shafer",
+   "note": "Electrohydraulic: gas/hydraulic heritage.",
+   "variants": [
+    "Shafer"
+   ]
+  },
+  {
+   "name": "Cowan Dynamics",
+   "note": "Electrohydraulic: gas/hydraulic heritage.",
+   "variants": [
+    "Cowan"
+   ]
+  },
+  {
+   "name": "Moog",
+   "note": "Electrohydraulic: broad industrial portfolio.",
+   "variants": []
+  },
+  {
+   "name": "HOERBIGER",
+   "note": "Electrohydraulic: broad industrial portfolio.",
+   "variants": [
+    "Hoerbiger"
+   ]
+  },
+  {
+   "name": "Diamond Gear",
+   "note": "Gearboxes: Houston-based domestic maker.",
+   "variants": [
+    "Diamond Gear Company"
+   ]
+  },
+  {
+   "name": "Ken Elliott Co",
+   "note": "Gearboxes: Illinois-based domestic maker.",
+   "variants": [
+    "Ken Elliott"
+   ]
+  },
+  {
+   "name": "SAMBO Gears",
+   "note": "Gearboxes: Busan, Korea; master distributor Mechanical Advantage Corp (Houston/The Woodlands TX); Limitorque private-labels Sambo gears.",
+   "variants": [
+    "SAMBO",
+    "Sambo"
+   ]
+  }
+ ]
 }
